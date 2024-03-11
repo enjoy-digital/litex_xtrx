@@ -94,12 +94,15 @@ SoapyLiteXXTRX::SoapyLiteXXTRX(const SoapySDR::Kwargs &args)
         0 * (1 << CSR_LMS7002M_CONTROL_TX_RX_LOOPBACK_ENABLE_OFFSET)
     );
 
+    /* bypass synchro */
+    litepcie_writel(_fd, CSR_PCIE_DMA0_SYNCHRONIZER_BYPASS_ADDR, 1);
+
     // reset other FPGA peripherals
 #if 1
-	// GGM Test
-    writeSetting("FPGA_DMA_LOOPBACK_ENABLE", "TRUE");
+    // GGM Test
+    writeSetting("FPGA_DMA_LOOPBACK_ENABLE", "FALSE");
     writeSetting("FPGA_TX_PATTERN", "1");
-    writeSetting("FPGA_RX_PATTERN", "1");
+    writeSetting("FPGA_RX_PATTERN", "0");
 #else
     writeSetting("FPGA_DMA_LOOPBACK_ENABLE", "FALSE");
     writeSetting("FPGA_TX_PATTERN", "0");
@@ -624,10 +627,10 @@ std::vector<double> SoapyLiteXXTRX::listSampleRates(const int direction,
     for (int i = 5; i >= 1; i--) {
         rates.push_back(baseRate / (1 << i));
     }
-	// GGM: hack
-	rates.push_back(30720000/4);
-	rates.push_back(30720000/2);
-	rates.push_back(30720000);
+    // GGM: hack
+    rates.push_back(30720000/4);
+    rates.push_back(30720000/2);
+    rates.push_back(30720000);
     return rates;
 }
 
