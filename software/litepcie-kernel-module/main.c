@@ -220,9 +220,6 @@ static int litepcie_dma_writer_start(struct litepcie_device *s, int chan_num)
 	struct litepcie_dma_chan *dmachan;
 	int i;
 
-	if (!s)
-		return -ENODEV;
-
 	dmachan = &s->chan[chan_num].dma;
 
 	/* Fill DMA Writer descriptors. */
@@ -259,9 +256,6 @@ static int litepcie_dma_writer_stop(struct litepcie_device *s, int chan_num)
 {
 	struct litepcie_dma_chan *dmachan;
 
-	if (!s)
-		return -ENODEV;
-
 	dmachan = &s->chan[chan_num].dma;
 
 	/* Flush and stop DMA Writer. */
@@ -283,9 +277,6 @@ static int litepcie_dma_reader_start(struct litepcie_device *s, int chan_num)
 {
 	struct litepcie_dma_chan *dmachan;
 	int i;
-
-	if (!s)
-		return -ENODEV;
 
 	dmachan = &s->chan[chan_num].dma;
 
@@ -322,9 +313,6 @@ static int litepcie_dma_reader_start(struct litepcie_device *s, int chan_num)
 static int litepcie_dma_reader_stop(struct litepcie_device *s, int chan_num)
 {
 	struct litepcie_dma_chan *dmachan;
-
-	if (!s)
-		return -ENODEV;
 
 	dmachan = &s->chan[chan_num].dma;
 
@@ -367,7 +355,7 @@ static irqreturn_t litepcie_interrupt(int irq, void *data)
 #ifdef CSR_PCIE_MSI_CLEAR_ADDR
 	irq_vector = litepcie_readl(s, CSR_PCIE_MSI_VECTOR_ADDR);
 	irq_enable = litepcie_readl(s, CSR_PCIE_MSI_ENABLE_ADDR);
-/* Multi-Vector MSI */
+/* MSI MultiVector / MSI-X */
 #else
 	irq_vector = 0;
 	for (i = 0; i < s->irqs; i++) {
@@ -478,7 +466,7 @@ static int litepcie_release(struct inode *inode, struct file *file)
 	}
 
 	/* Free DMA sources */
-	litepcie_dma_deinit_cpu(chan->litepcie_dev);
+	//litepcie_dma_deinit_cpu(chan->litepcie_dev);
 
 	kfree(chan_priv);
 
@@ -494,9 +482,6 @@ static ssize_t litepcie_read(struct file *file, char __user *data, size_t size, 
 	struct litepcie_chan_priv *chan_priv = file->private_data;
 	struct litepcie_chan *chan = chan_priv->chan;
 	struct litepcie_device *s = chan->litepcie_dev;
-
-	if (!s)
-		return -ENODEV;
 
 	if (file->f_flags & O_NONBLOCK) {
 		if (chan->dma.writer_hw_count == chan->dma.writer_sw_count)
@@ -553,9 +538,6 @@ static ssize_t litepcie_write(struct file *file, const char __user *data, size_t
 	struct litepcie_chan *chan = chan_priv->chan;
 	struct litepcie_device *s = chan->litepcie_dev;
 
-	if (!s)
-		return -ENODEV;
-
 	if (file->f_flags & O_NONBLOCK) {
 		if (chan->dma.reader_hw_count == chan->dma.reader_sw_count)
 			ret = -EAGAIN;
@@ -608,9 +590,6 @@ static int litepcie_mmap(struct file *file, struct vm_area_struct *vma)
 	unsigned long pfn;
 	int is_tx, i;
 
-	if (!s)
-		return -ENODEV;
-
 	if (vma->vm_end - vma->vm_start != DMA_BUFFER_TOTAL_SIZE)
 		return -EINVAL;
 
@@ -649,9 +628,6 @@ static unsigned int litepcie_poll(struct file *file, poll_table *wait)
 //#ifdef DEBUG_POLL
 	struct litepcie_device *s = chan->litepcie_dev;
 //#endif
-
-	if (!s)
-		return -ENODEV;
 
 	poll_wait(file, &chan->wait_rd, wait);
 	poll_wait(file, &chan->wait_wr, wait);
@@ -767,6 +743,7 @@ static long litepcie_ioctl(struct file *file, unsigned int cmd,
 	case LITEPCIE_IOCTL_DMA_INIT:
 	{
 		struct litepcie_ioctl_dma_init m;
+		printk("ioctl LITEPCIE_IOCTL_DMA_INIT\n");
 
 		if (copy_from_user(&m, (void *)arg, sizeof(m))) {
 			ret = -EFAULT;
@@ -774,7 +751,7 @@ static long litepcie_ioctl(struct file *file, unsigned int cmd,
 		}
 
 		/* allocate all dma buffers */
-		ret = litepcie_dma_init_cpu(chan->litepcie_dev);
+		//ret = litepcie_dma_init_cpu(chan->litepcie_dev);
 
 		break;
 	}
@@ -1121,7 +1098,7 @@ static int litepcie_pci_probe(struct pci_dev *dev, const struct pci_device_id *i
 
 	pci_set_master(dev);
 #if LINUX_VERSION_CODE < KERNEL_VERSION(5, 18, 0)
-	ret = pci_set_dma_mask(dev, DMA_BIT_MASK(32));
+	ret = pci_set_dma_mask(dev, DMA_BIT_MASK(DMA_ADDR_WIDTH));
 #else
 	ret = dma_set_mask(&dev->dev, DMA_BIT_MASK(DMA_ADDR_WIDTH));
 #endif
@@ -1130,19 +1107,32 @@ static int litepcie_pci_probe(struct pci_dev *dev, const struct pci_device_id *i
 		goto fail1;
 	};
 
+
+/* MSI-X */
+#ifdef CSR_PCIE_MSI_PBA_ADDR
+	irqs = pci_alloc_irq_vectors(dev, 1, 32, PCI_IRQ_MSIX);
+/* MSI Single / MultiVector */
+#else
 	irqs = pci_alloc_irq_vectors(dev, 1, 32, PCI_IRQ_MSI);
+#endif
 	if (irqs < 0) {
 		dev_err(&dev->dev, "Failed to enable MSI\n");
 		ret = irqs;
 		goto fail1;
 	}
+/* MSI-X */
+#ifdef CSR_PCIE_MSI_PBA_ADDR
+	dev_info(&dev->dev, "%d MSI-X IRQs allocated.\n", irqs);
+/* MSI Single / MultiVector */
+#else
 	dev_info(&dev->dev, "%d MSI IRQs allocated.\n", irqs);
+#endif
 
 	litepcie_dev->irqs = 0;
 	for (i = 0; i < irqs; i++) {
 		int irq = pci_irq_vector(dev, i);
 
-		ret = request_irq(irq, litepcie_interrupt, IRQF_SHARED, LITEPCIE_NAME, litepcie_dev);
+		ret = request_irq(irq, litepcie_interrupt, 0, LITEPCIE_NAME, litepcie_dev);
 		if (ret < 0) {
 			dev_err(&dev->dev, " Failed to allocate IRQ %d\n", dev->irq);
 			while (--i >= 0) {
@@ -1237,6 +1227,13 @@ static int litepcie_pci_probe(struct pci_dev *dev, const struct pci_device_id *i
 			}
 			break;
 		}
+	}
+
+	/* allocate all dma buffers */
+	ret = litepcie_dma_init_cpu(litepcie_dev);
+	if (ret) {
+		dev_err(&dev->dev, "Failed to allocate DMA\n");
+		goto fail3;
 	}
 
 #ifdef CSR_UART_XOVER_RXTX_ADDR
