@@ -362,6 +362,14 @@ void interleave(const void *src, int8_t *dst, uint32_t len, std::string format, 
             dst[i * BYTES_PER_SAMPLE + 1] = (int8_t)(samples_cs16[i * BYTES_PER_SAMPLE + 1] >> 8);
         }
     }
+    else if (format == SOAPY_SDR_CF32) {
+        float *samples_cf32 = (float *)src + offset * BYTES_PER_SAMPLE;
+        for (uint32_t i = offset; i < len/BYTES_PER_SAMPLE; i++)
+        {
+            ((int16_t *)dst)[i * BYTES_PER_SAMPLE] = (int16_t)(((float *)samples_cf32)[i * BYTES_PER_SAMPLE] * 2047.0);
+            ((int16_t *)dst)[i * BYTES_PER_SAMPLE + 1] = (int16_t)(((float *)samples_cf32)[i * BYTES_PER_SAMPLE + 1] * 2047.0);
+        }
+    }
     else {
         SoapySDR_logf(SOAPY_SDR_ERROR, "Unsupported format: %s", format.c_str());
     }
