@@ -71,8 +71,8 @@ class MYTXPatternGenerator(Module, AutoCSR):
         # ----------
         self.sync += [
             self.source.data.eq(0),
-            self.source.data[ 0:11].eq(count[ 0:11]),
-            self.source.data[16:27].eq(count[ 0:11]),
+            self.source.data[ 0:12].eq(count[ 0:11]), # FIXME: sign extension
+            self.source.data[16:28].eq(count[ 0:11]), # FIXME: sign extension
         ]
 
 
@@ -122,8 +122,6 @@ class BaseSoC(SoCCore):
         "lms7002m"    : 26,
         "xsync_spi"   : 27,
         "synchro"     : 28,
-
-        "analyzer"    : 30,
     }
 
     def __init__(self, sys_clk_freq=int(125e6), with_cpu=True, cpu_firmware=None, with_jtagbone=True, with_analyzer=True, nonpro=False, address_width=64):
@@ -131,6 +129,14 @@ class BaseSoC(SoCCore):
 
         git_sha = subprocess.check_output(['git', 'rev-parse', '--short', 'HEAD']).strip().decode('utf-8')
         git_dirty = "-dirty" if len(subprocess.check_output(['git', 'diff'])) != 0 else ""
+
+        with_rx_pattern = True
+        with_tx_test    = True
+
+        if with_analyzer:
+            SoCCore.csr_map["analyzer"] = 30
+            with_rx_scope = False
+            with_tx_scope = True
 
         # SoCCore ----------------------------------------------------------------------------------
         SoCCore.__init__(self, platform, sys_clk_freq,
@@ -189,6 +195,7 @@ class BaseSoC(SoCCore):
             data_width = 64,
             bar0_size  = 0x20000,
             cd         = "pcie"
+            #cd         = "sys"
         )
         self.add_pcie(phy=self.pcie_phy, address_width=address_width, ndmas=1,
             with_dma_buffering    = True, dma_buffering_depth=8192 if nonpro else 16384,
@@ -256,30 +263,34 @@ class BaseSoC(SoCCore):
             tx_delay_init = 16,
             rx_delay_init = 16
         )
-        self.comb += self.pcie_dma0.source.connect(self.lms7002m.sink)
-        #self.comb += self.lms7002m.source.connect(self.pcie_dma0.sink)
 
-        if True:
+        if not with_tx_test:
+            self.comb += self.pcie_dma0.source.connect(self.lms7002m.sink)
+        else:
+            self.tx0_i = Signal(16)
+            self.tx0_q = Signal(16)
+            self.tx1_i = Signal(16)
+            self.tx1_q = Signal(16)
+            self.sync += [
+                If(self.pcie_dma0.source.valid,
+                    self.pcie_dma0.source.ready.eq(1),
+                    self.tx0_i.eq(self.pcie_dma0.source.data[ 0:16]),
+                    self.tx0_q.eq(self.pcie_dma0.source.data[16:32]),
+                    self.tx1_i.eq(self.pcie_dma0.source.data[32:48]),
+                    self.tx1_q.eq(self.pcie_dma0.source.data[48:64]),
+                )
+            ]
+
+        if not with_rx_pattern:
+            self.comb += self.lms7002m.source.connect(self.pcie_dma0.sink)
+            with_rx_scope = False
+        else:
             test_tx_pat = MYTXPatternGenerator()
             self.submodules.test_tx_pat = test_tx_pat
             self.submodules.rx_conv    = rx_conv    = stream.Converter(32, 64)
             self.comb += self.test_tx_pat.source.connect(self.rx_conv.sink, omit={"data"})
             self.comb += self.rx_conv.sink.data.eq(self.test_tx_pat.source.data & 0x0fff0fff)
             self.comb += self.rx_conv.source.connect(self.pcie_dma0.sink)
-        else:
-            count = Signal(24)
-            mydata = Signal(32)
-            self.comb += [
-                self.pcie_dma0.sink.valid.eq(1),
-                mydata[ 0:16].eq(count[ 0:12]),
-                mydata[16:32].eq(count[12:24]),
-                self.pcie_dma0.sink.data.eq(mydata & 0x0fff0fff),
-            ]
-
-            self.sync.pcie += [
-                self.pcie_dma0.sink.last.eq(~self.pcie_dma0.sink.last),
-                count.eq(count + 1),
-            ]
 
         platform.add_false_path_constraints(self.crg.cd_sys.clk, self.lms7002m.cd_rfic.clk)
 
@@ -287,11 +298,6 @@ class BaseSoC(SoCCore):
         if with_analyzer:
             #analyzer_signals = [platform.lookup_request("lms7002m")]
             analyzer_signals = [
-                self.pcie_dma0.sink,
-                self.pcie_dma0.source,
-                self.pcie_dma0.writer.sink,
-                #self.pcie_dma0.reader.source,
-                self.test_tx_pat.source,
                 #self.lms7002m.sink,
                 #self.lms7002m.source,
                 #self.lms7002m.tx_frame,
@@ -300,6 +306,32 @@ class BaseSoC(SoCCore):
                 #self.lms7002m.rx_aligned,
                 #self.lms7002m.rx_data,
             ]
+
+            if with_rx_scope:
+                analyzer_signals += [
+                    self.pcie_dma0.sink,
+                    self.pcie_dma0.writer.sink,
+                ]
+
+                if with_rx_pattern:
+                    analyzer_signals += [
+                        self.test_tx_pat.source
+                    ]
+
+            if with_tx_scope:
+                analyzer_signals += [
+                    #self.pcie_dma0.reader.source,
+                    self.pcie_dma0.source.data,
+                    self.pcie_dma0.source.ready,
+                    self.pcie_dma0.source.valid,
+                    self.pcie_dma0.source.last,
+                    self.pcie_dma0.source.first,
+                    self.tx0_i,
+                    self.tx0_q,
+                    self.tx1_i,
+                    self.tx1_q,
+                ]
+
             self.submodules.analyzer = LiteScopeAnalyzer(analyzer_signals,
                 depth        = 128,
                 clock_domain = "sys",
