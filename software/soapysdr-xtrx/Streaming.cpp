@@ -136,7 +136,7 @@ int SoapyLiteXXTRX::deactivateStream(SoapySDR::Stream *stream, const int /*flags
         litepcie_dma_writer(_fd, 0, &_rx_stream.hw_count, &_rx_stream.sw_count);
     } else if (stream == TX_STREAM) {
         // disable the DMA engine
-        litepcie_dma_reader(_fd, 1, &_tx_stream.hw_count, &_tx_stream.sw_count);
+        litepcie_dma_reader(_fd, 0, &_tx_stream.hw_count, &_tx_stream.sw_count);
     }
     return 0;
 }
