@@ -343,8 +343,8 @@ void deinterleave(const int8_t *src, void *dst, uint32_t len, std::string format
         float *samples_cf32 = (float *)dst + offset * BYTES_PER_SAMPLE;
         for (uint32_t i = offset; i < len; i++)
         {
-            samples_cf32[i * BYTES_PER_SAMPLE] = (float)(((int16_t*)src)[i * BYTES_PER_SAMPLE] /*/ 127.0*/);
-            samples_cf32[i * BYTES_PER_SAMPLE + 1] = (float)(((int16_t *)src)[i * BYTES_PER_SAMPLE + 1] /*/ 127.0*/);
+            samples_cf32[i * BYTES_PER_SAMPLE] = (float)(((int16_t*)src)[i * BYTES_PER_SAMPLE] / 2047.0);
+            samples_cf32[i * BYTES_PER_SAMPLE + 1] = (float)(((int16_t *)src)[i * BYTES_PER_SAMPLE + 1] / 2047.0);
         }
     }
     else {
