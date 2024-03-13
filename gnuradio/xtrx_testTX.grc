@@ -217,7 +217,7 @@ blocks:
     antenna1: ''
     bandwidth0: 20e6
     bandwidth1: '0'
-    center_freq0: '122.88'
+    center_freq0: 100e6
     center_freq1: '0'
     comment: ''
     dc_offset0: '0'
