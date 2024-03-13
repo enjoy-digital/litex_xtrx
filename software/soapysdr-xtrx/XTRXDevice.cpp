@@ -48,12 +48,6 @@ std::string getXTRXSerial(int fd);
  * Constructor
  **********************************************************************/
 
-void dma_init_cpu(int fd) {
-    struct litepcie_ioctl_dma_init m;
-    m.use_gpu = 0;
-    checked_ioctl(fd, LITEPCIE_IOCTL_DMA_INIT, &m);
-}
-
 void dma_set_loopback(int fd, bool loopback_enable) {
     struct litepcie_ioctl_dma m;
     m.loopback_enable = loopback_enable ? 1 : 0;
@@ -193,7 +187,6 @@ SoapyLiteXXTRX::SoapyLiteXXTRX(const SoapySDR::Kwargs &args)
 
     // set-up the DMA
     checked_ioctl(_fd, LITEPCIE_IOCTL_MMAP_DMA_INFO, &_dma_mmap_info);
-    dma_init_cpu(_fd);
     _dma_buf = NULL;
 
     // NOTE: if initialization misses a setting/register, try experimenting in
