@@ -132,7 +132,8 @@ class BaseSoC(SoCCore):
 
         with_rx_pattern = False
         with_tx_test    = False
-        with_rxtx_loop  = True
+        with_rxtx_loop  = False
+        with_analyzer   = False
 
         if with_analyzer:
             SoCCore.csr_map["analyzer"] = 30
