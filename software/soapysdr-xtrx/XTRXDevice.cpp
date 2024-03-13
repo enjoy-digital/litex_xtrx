@@ -54,6 +54,8 @@ void dma_set_loopback(int fd, bool loopback_enable) {
     checked_ioctl(fd, LITEPCIE_IOCTL_DMA, &m);
 }
 
+//#define ENABLE_TEST_TONE
+
 SoapyLiteXXTRX::SoapyLiteXXTRX(const SoapySDR::Kwargs &args)
     : _fd(-1), _lms(NULL), _masterClockRate(1.0e6), _refClockRate(26e6) {
     LMS7_set_log_handler(&customLogHandler);
@@ -95,7 +97,7 @@ SoapyLiteXXTRX::SoapyLiteXXTRX(const SoapySDR::Kwargs &args)
 #if 1
     // GGM Test
     writeSetting("FPGA_DMA_LOOPBACK_ENABLE", "FALSE");
-    writeSetting("FPGA_TX_PATTERN", "1");
+    writeSetting("FPGA_TX_PATTERN", "0");
     writeSetting("FPGA_RX_PATTERN", "0");
 #else
     writeSetting("FPGA_DMA_LOOPBACK_ENABLE", "FALSE");
@@ -200,6 +202,11 @@ SoapyLiteXXTRX::SoapyLiteXXTRX(const SoapySDR::Kwargs &args)
 
         }
     }
+
+#ifdef ENABLE_TEST_TONE
+    writeSetting("RXTSP_ENABLE", "TRUE");
+    writeSetting("RXTSP_TONE", "8");
+#endif
 
     SoapySDR::log(SOAPY_SDR_INFO, "SoapyLiteXXTRX initialization complete");
 }
