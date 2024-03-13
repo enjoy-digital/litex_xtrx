@@ -147,7 +147,7 @@ static void litepcie_disable_interrupt(struct litepcie_device *s, int irq_num)
 	litepcie_writel(s, CSR_PCIE_MSI_ENABLE_ADDR, v);
 }
 
-static int litepcie_dma_init_cpu(struct litepcie_device *s)
+static int litepcie_dma_init(struct litepcie_device *s)
 {
 
 	int i, j;
@@ -185,37 +185,7 @@ static int litepcie_dma_init_cpu(struct litepcie_device *s)
 	return 0;
 }
 
-static int litepcie_dma_deinit_cpu(struct litepcie_device *s)
-{
-	int i, j;
-	struct litepcie_dma_chan *dmachan;
-
-	/* for each dma channel */
-	for (i = 0; i < s->channels; i++) {
-		dmachan = &s->chan[i].dma;
-		/* for each dma buffer */
-		for (j = 0; j < DMA_BUFFER_COUNT; j++) {
-			/* allocate rd */
-			dma_free_coherent(
-				&s->dev->dev,
-				DMA_BUFFER_SIZE,
-				dmachan->reader_addr[j],
-				dmachan->reader_handle[j]
-			);
-			/* allocate wr */
-			dma_free_coherent(
-				&s->dev->dev,
-				DMA_BUFFER_SIZE,
-				dmachan->writer_addr[j],
-				dmachan->writer_handle[j]
-			);
-		}
-	}
-
-	return 0;
-}
-
-static int litepcie_dma_writer_start(struct litepcie_device *s, int chan_num)
+static void litepcie_dma_writer_start(struct litepcie_device *s, int chan_num)
 {
 	struct litepcie_dma_chan *dmachan;
 	int i;
@@ -248,11 +218,9 @@ static int litepcie_dma_writer_start(struct litepcie_device *s, int chan_num)
 
 	/* Start DMA Writer. */
 	litepcie_writel(s, dmachan->base + PCIE_DMA_WRITER_ENABLE_OFFSET, 1);
-
-	return 0;
 }
 
-static int litepcie_dma_writer_stop(struct litepcie_device *s, int chan_num)
+static void litepcie_dma_writer_stop(struct litepcie_device *s, int chan_num)
 {
 	struct litepcie_dma_chan *dmachan;
 
@@ -269,11 +237,9 @@ static int litepcie_dma_writer_stop(struct litepcie_device *s, int chan_num)
 	dmachan->writer_hw_count = 0;
 	dmachan->writer_hw_count_last = 0;
 	dmachan->writer_sw_count = 0;
-
-	return 0;
 }
 
-static int litepcie_dma_reader_start(struct litepcie_device *s, int chan_num)
+static void litepcie_dma_reader_start(struct litepcie_device *s, int chan_num)
 {
 	struct litepcie_dma_chan *dmachan;
 	int i;
@@ -306,11 +272,9 @@ static int litepcie_dma_reader_start(struct litepcie_device *s, int chan_num)
 
 	/* start dma reader */
 	litepcie_writel(s, dmachan->base + PCIE_DMA_READER_ENABLE_OFFSET, 1);
-
-	return 0;
 }
 
-static int litepcie_dma_reader_stop(struct litepcie_device *s, int chan_num)
+static void litepcie_dma_reader_stop(struct litepcie_device *s, int chan_num)
 {
 	struct litepcie_dma_chan *dmachan;
 
@@ -327,8 +291,6 @@ static int litepcie_dma_reader_stop(struct litepcie_device *s, int chan_num)
 	dmachan->reader_hw_count = 0;
 	dmachan->reader_hw_count_last = 0;
 	dmachan->reader_sw_count = 0;
-
-	return 0;
 }
 
 void litepcie_stop_dma(struct litepcie_device *s)
@@ -464,9 +426,6 @@ static int litepcie_release(struct inode *inode, struct file *file)
 		chan->dma.writer_lock = 0;
 		chan->dma.writer_enable = 0;
 	}
-
-	/* Free DMA sources */
-	//litepcie_dma_deinit_cpu(chan->litepcie_dev);
 
 	kfree(chan_priv);
 
@@ -625,9 +584,9 @@ static unsigned int litepcie_poll(struct file *file, poll_table *wait)
 
 	struct litepcie_chan_priv *chan_priv = file->private_data;
 	struct litepcie_chan *chan = chan_priv->chan;
-//#ifdef DEBUG_POLL
+#ifdef DEBUG_POLL
 	struct litepcie_device *s = chan->litepcie_dev;
-//#endif
+#endif
 
 	poll_wait(file, &chan->wait_rd, wait);
 	poll_wait(file, &chan->wait_wr, wait);
@@ -740,21 +699,6 @@ static long litepcie_ioctl(struct file *file, unsigned int cmd,
 	}
 	break;
 #endif
-	case LITEPCIE_IOCTL_DMA_INIT:
-	{
-		struct litepcie_ioctl_dma_init m;
-		printk("ioctl LITEPCIE_IOCTL_DMA_INIT\n");
-
-		if (copy_from_user(&m, (void *)arg, sizeof(m))) {
-			ret = -EFAULT;
-			break;
-		}
-
-		/* allocate all dma buffers */
-		//ret = litepcie_dma_init_cpu(chan->litepcie_dev);
-
-		break;
-	}
 	case LITEPCIE_IOCTL_DMA:
 	{
 		struct litepcie_ioctl_dma m;
@@ -813,13 +757,11 @@ static long litepcie_ioctl(struct file *file, unsigned int cmd,
 		if (m.enable != chan->dma.reader_enable) {
 			/* enable / disable DMA */
 			if (m.enable) {
-				ret = litepcie_dma_reader_start(chan->litepcie_dev, chan->index);
-				if (ret != 0)
-					break;
+				litepcie_dma_reader_start(chan->litepcie_dev, chan->index);
 				litepcie_enable_interrupt(chan->litepcie_dev, chan->dma.reader_interrupt);
 			} else {
 				litepcie_disable_interrupt(chan->litepcie_dev, chan->dma.reader_interrupt);
-				ret = litepcie_dma_reader_stop(chan->litepcie_dev, chan->index);
+				litepcie_dma_reader_stop(chan->litepcie_dev, chan->index);
 			}
 		}
 
@@ -1039,7 +981,9 @@ static int litepcie_pci_probe(struct pci_dev *dev, const struct pci_device_id *i
 	int i;
 	char fpga_identifier[256];
 	struct litepcie_device *litepcie_dev = NULL;
+#ifdef CSR_UART_XOVER_RXTX_ADDR
 	struct resource *tty_res = NULL;
+#endif
 
 	dev_info(&dev->dev, "\e[1m[Probing device]\e[0m\n");
 
@@ -1230,7 +1174,7 @@ static int litepcie_pci_probe(struct pci_dev *dev, const struct pci_device_id *i
 	}
 
 	/* allocate all dma buffers */
-	ret = litepcie_dma_init_cpu(litepcie_dev);
+	ret = litepcie_dma_init(litepcie_dev);
 	if (ret) {
 		dev_err(&dev->dev, "Failed to allocate DMA\n");
 		goto fail3;
@@ -1338,11 +1282,11 @@ static int __init litepcie_module_init(void)
 {
 	int ret;
 
-#if LINUX_VERSION_CODE < KERNEL_VERSION(6, 4, 0)
-	litepcie_class = class_create(THIS_MODULE, LITEPCIE_NAME);
-#else
-	litepcie_class = class_create(LITEPCIE_NAME);
-#endif
+	#if LINUX_VERSION_CODE < KERNEL_VERSION(6, 4, 0)
+		litepcie_class = class_create(THIS_MODULE, LITEPCIE_NAME);
+	#else
+		litepcie_class = class_create(LITEPCIE_NAME);
+	#endif
 	if (!litepcie_class) {
 		ret = -EEXIST;
 		pr_err(" Failed to create class\n");
