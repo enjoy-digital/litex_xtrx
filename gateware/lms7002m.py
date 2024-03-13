@@ -438,13 +438,13 @@ class LMS7002M(Module, AutoCSR):
             If(rx_aligned,
                 rx_frame[0].eq(rx_frame0),
                 rx_frame[1].eq(rx_frame1),
-                rx_data[:16].eq(rx_data0),
-                rx_data[16:].eq(rx_data1),
+                rx_data[:16].eq(Cat(rx_data0[:12], Replicate(rx_data0[11], 4))),
+                rx_data[16:].eq(Cat(rx_data1[:12], Replicate(rx_data1[11], 4))),
             ).Else(
                 rx_frame[0].eq(rx_frame1_d),
                 rx_frame[1].eq(rx_frame0),
-                rx_data[:16].eq(rx_data1_d),
-                rx_data[16:].eq(rx_data0),
+                rx_data[:16].eq(Cat(rx_data1_d[:12], Replicate(rx_data1_d[11], 4))),
+                rx_data[16:].eq(Cat(rx_data0[:12],   Replicate(rx_data0[11], 4))),
             )
         ]
 
