@@ -130,13 +130,15 @@ class BaseSoC(SoCCore):
         git_sha = subprocess.check_output(['git', 'rev-parse', '--short', 'HEAD']).strip().decode('utf-8')
         git_dirty = "-dirty" if len(subprocess.check_output(['git', 'diff'])) != 0 else ""
 
-        with_rx_pattern = True
-        with_tx_test    = True
+        with_rx_pattern = False
+        with_tx_test    = False
+        with_rxtx_loop  = True
 
         if with_analyzer:
             SoCCore.csr_map["analyzer"] = 30
-            with_rx_scope = False
-            with_tx_scope = True
+            with_rx_scope   = False
+            with_tx_scope   = False
+            with_rxtx_scope = True
 
         # SoCCore ----------------------------------------------------------------------------------
         SoCCore.__init__(self, platform, sys_clk_freq,
@@ -264,33 +266,35 @@ class BaseSoC(SoCCore):
             rx_delay_init = 16
         )
 
-        if not with_tx_test:
-            self.comb += self.pcie_dma0.source.connect(self.lms7002m.sink)
-        else:
+        if with_tx_test:
             self.tx0_i = Signal(16)
             self.tx0_q = Signal(16)
             self.tx1_i = Signal(16)
             self.tx1_q = Signal(16)
+            self.comb += self.pcie_dma0.source.ready.eq(1),
             self.sync += [
                 If(self.pcie_dma0.source.valid,
-                    self.pcie_dma0.source.ready.eq(1),
                     self.tx0_i.eq(self.pcie_dma0.source.data[ 0:16]),
                     self.tx0_q.eq(self.pcie_dma0.source.data[16:32]),
                     self.tx1_i.eq(self.pcie_dma0.source.data[32:48]),
                     self.tx1_q.eq(self.pcie_dma0.source.data[48:64]),
                 )
             ]
+        elif not with_rxtx_loop:
+            self.comb += self.pcie_dma0.source.connect(self.lms7002m.sink)
 
-        if not with_rx_pattern:
-            self.comb += self.lms7002m.source.connect(self.pcie_dma0.sink)
-            with_rx_scope = False
-        else:
+        if with_rxtx_loop:
+            self.comb += self.pcie_dma0.source.connect(self.pcie_dma0.sink)
+        elif with_rx_pattern:
             test_tx_pat = MYTXPatternGenerator()
             self.submodules.test_tx_pat = test_tx_pat
             self.submodules.rx_conv    = rx_conv    = stream.Converter(32, 64)
             self.comb += self.test_tx_pat.source.connect(self.rx_conv.sink, omit={"data"})
             self.comb += self.rx_conv.sink.data.eq(self.test_tx_pat.source.data & 0x0fff0fff)
             self.comb += self.rx_conv.source.connect(self.pcie_dma0.sink)
+        else:
+            self.comb += self.lms7002m.source.connect(self.pcie_dma0.sink)
+            with_rx_scope = False
 
         platform.add_false_path_constraints(self.crg.cd_sys.clk, self.lms7002m.cd_rfic.clk)
 
@@ -318,6 +322,10 @@ class BaseSoC(SoCCore):
                         self.test_tx_pat.source
                     ]
 
+            if with_rxtx_scope:
+                analyzer_signals += [
+                    self.pcie_dma0.reader.source,
+                ]
             if with_tx_scope:
                 analyzer_signals += [
                     #self.pcie_dma0.reader.source,
