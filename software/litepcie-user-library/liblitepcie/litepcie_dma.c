@@ -79,10 +79,6 @@ int litepcie_dma_init(struct litepcie_dma_ctrl *dma, const char *device_name, ui
         return -1;
     }
 
-	struct litepcie_ioctl_dma_init m;
-	m.use_gpu = 0;
-	checked_ioctl(dma->fds.fd, LITEPCIE_IOCTL_DMA_INIT, &m);
-
     /* request dma reader and writer */
     if ((litepcie_request_dma(dma->fds.fd, dma->use_reader, dma->use_writer) == 0)) {
         fprintf(stderr, "DMA not available\n");
