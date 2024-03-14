@@ -197,6 +197,14 @@ class LMS7002M(Module, AutoCSR):
                 ("``0b0``", "TX-RX FPGA Loopback Disable."),
                 ("``0b1``", "TX-RX FPGA Loopback Enable.")
             ], reset=0),
+            CSRField("tx_x1_mode", size=1, offset=17, values=[
+                ("``0b0``", "X2 (Normal operation)."),
+                ("``0b1``", "X1."),
+            ]),
+            CSRField("rx_x1_mode", size=1, offset=18, values=[
+                ("``0b0``", "X2 (Normal operation)."),
+                ("``0b1``", "X1."),
+            ]),
         ])
         self.status   = CSRStatus(fields=[
             CSRField("rx_clk_active", size=1, offset=0, values=[
@@ -286,6 +294,7 @@ class LMS7002M(Module, AutoCSR):
         # ------------
         self.submodules.tx_cdc     = tx_cdc     = stream.ClockDomainCrossing([("data", 64)], cd_from="sys", cd_to="rfic")
         self.submodules.tx_conv    = tx_conv    = ClockDomainsRenamer("rfic")(stream.Converter(64, 32))
+        self.submodules.tx_conv_x1 = tx_conv_x1 = ClockDomainsRenamer("rfic")(stream.Converter(32, 16))
         self.submodules.tx_pattern = tx_pattern = TXPatternGenerator()
         self.comb += self.sink.connect(tx_cdc.sink)
         self.comb += tx_cdc.sink.last.eq(1)
@@ -300,10 +309,18 @@ class LMS7002M(Module, AutoCSR):
                 tx_data.eq(tx_pattern.source.data),
             # ... Else from DMA -> CDC -> DownConverter.
             ).Else(
-                tx_conv.source.ready.eq(1),
-                tx_frame[0].eq(tx_conv.source.last),
-                tx_frame[1].eq(tx_conv.source.last),
-                tx_data.eq(tx_conv.source.data),
+                If(self.control.fields.tx_x1_mode, # FIXME: Add CDC.
+                    tx_conv.source.connect(tx_conv_x1.sink),
+                    tx_conv_x1.source.ready.eq(1),
+                    tx_frame[0].eq(tx_conv_x1.source.last),
+                    tx_frame[1].eq(tx_conv_x1.source.last),
+                    tx_data.eq(tx_conv_x1.source.data),
+                ).Else(
+                    tx_conv.source.ready.eq(1),
+                    tx_frame[0].eq(tx_conv.source.last),
+                    tx_frame[1].eq(tx_conv.source.last),
+                    tx_data.eq(tx_conv.source.data),
+                ),
                 # When TX is inhibited, transmit zeroes.
                 If(self.control.fields.tx_inhibit,
                     tx_data.eq(0)
@@ -364,6 +381,7 @@ class LMS7002M(Module, AutoCSR):
 
         # RX Datapath.
         # ------------
+        self.submodules.rx_conv_x1 = rx_conv_x1 = ClockDomainsRenamer("rfic")(stream.Converter(16, 32))
         self.submodules.rx_conv    = rx_conv    = ClockDomainsRenamer("rfic")(stream.Converter(32, 64))
         self.submodules.rx_pattern = rx_pattern = RXPatternChecker()
         self.submodules.rx_cdc     = rx_cdc     = stream.ClockDomainCrossing([("data", 64)], cd_from="rfic", cd_to="sys")
@@ -456,14 +474,24 @@ class LMS7002M(Module, AutoCSR):
                 rx_pattern.sink.data.eq(rx_data)
             # ...Else...
             ).Else(
-                rx_conv.sink.valid.eq(1),
-                rx_conv.sink.last.eq(rx_frame != 0),
                 # Do a TX-RX Loopback with 12-bit masking when enabled (to match LMS7002M behaviour)...
                 If(self.control.fields.tx_rx_loopback_enable,
+                    rx_conv.sink.valid.eq(1),
+                    rx_conv.sink.last.eq(rx_frame != 0),
                     rx_conv.sink.data.eq(tx_data & 0x0fff0fff)
                 # ... Or do RX -> UpConverter --> CDC --> DMA.
                 ).Else(
-                    rx_conv.sink.data.eq(rx_data)
+                    # RX X1 Mode.
+                    If(self.control.fields.rx_x1_mode, # FIXME: Add CDC.
+                        rx_conv_x1.sink.valid.eq(1),
+                        rx_conv_x1.sink.last.eq(rx_frame != 0),
+                        rx_conv_x1.source.connect(rx_conv.sink),
+                    # RX X2 Mode.
+                    ).Else(
+                        rx_conv.sink.valid.eq(1),
+                        rx_conv.sink.last.eq(rx_frame != 0),
+                        rx_conv.sink.data.eq(rx_data)
+                    )
                 )
             )
         ]
