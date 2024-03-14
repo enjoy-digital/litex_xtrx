@@ -6,7 +6,9 @@
 
 from migen import *
 from migen.genlib.cdc import MultiReg
-from migen.genlib.misc import WaitTimer
+
+from litex.gen import *
+from litex.gen.genlib.misc import WaitTimer
 
 from litex.soc.interconnect.csr import *
 from litex.soc.interconnect import stream
@@ -79,7 +81,7 @@ from litex.soc.cores.spi import SPIMaster
 
 # TX/RX Pattern Generator/Checker ------------------------------------------------------------------
 
-class TXPatternGenerator(Module, AutoCSR):
+class TXPatternGenerator(LiteXModule):
     def __init__(self):
         self.source  = stream.Endpoint([("data", 32)])
         self.control = CSRStorage(fields=[
@@ -122,7 +124,7 @@ class TXPatternGenerator(Module, AutoCSR):
         ]
 
 
-class RXPatternChecker(Module, AutoCSR):
+class RXPatternChecker(LiteXModule):
     def __init__(self):
         self.sink    = stream.Endpoint([("data", 32)])
         self.control = CSRStorage(fields=[
@@ -165,7 +167,7 @@ class RXPatternChecker(Module, AutoCSR):
 
 # LMS7002M -----------------------------------------------------------------------------------------
 
-class LMS7002M(Module, AutoCSR):
+class LMS7002M(LiteXModule):
     def __init__(self, platform, pads, sys_clk_freq, tx_delay_init=0, rx_delay_init=0):
         # Endpoints.
         self.sink   = stream.Endpoint([("data", 64)])
@@ -247,7 +249,7 @@ class LMS7002M(Module, AutoCSR):
 
         # SPI.
         # ----
-        self.submodules.spi = SPIMaster(
+        self.spi = SPIMaster(
             pads         = pads,
             data_width   = 32,
             sys_clk_freq = sys_clk_freq,
@@ -258,7 +260,7 @@ class LMS7002M(Module, AutoCSR):
         # ---------
 
         # Use MCLK1 as RX-Clk and constraint it to 245.76MHz (61.44MSPS MIMO)
-        self.clock_domains.cd_rfic = ClockDomain("rfic")
+        self.cd_rfic = ClockDomain("rfic")
         self.comb += self.cd_rfic.clk.eq(pads.mclk1)
         platform.add_period_constraint(pads.mclk1, 1e9/245.76e6)
 
@@ -292,10 +294,10 @@ class LMS7002M(Module, AutoCSR):
 
         # TX Datapath.
         # ------------
-        self.submodules.tx_cdc     = tx_cdc     = stream.ClockDomainCrossing([("data", 64)], cd_from="sys", cd_to="rfic")
-        self.submodules.tx_conv    = tx_conv    = ClockDomainsRenamer("rfic")(stream.Converter(64, 32))
-        self.submodules.tx_conv_x1 = tx_conv_x1 = ClockDomainsRenamer("rfic")(stream.Converter(32, 16))
-        self.submodules.tx_pattern = tx_pattern = TXPatternGenerator()
+        self.tx_cdc     = tx_cdc     = stream.ClockDomainCrossing([("data", 64)], cd_from="sys", cd_to="rfic")
+        self.tx_conv    = tx_conv    = ClockDomainsRenamer("rfic")(stream.Converter(64, 32))
+        self.tx_conv_x1 = tx_conv_x1 = ClockDomainsRenamer("rfic")(stream.Converter(32, 16))
+        self.tx_pattern = tx_pattern = TXPatternGenerator()
         self.comb += self.sink.connect(tx_cdc.sink)
         self.comb += tx_cdc.sink.last.eq(1)
         self.comb += tx_cdc.source.connect(tx_conv.sink)
@@ -381,10 +383,10 @@ class LMS7002M(Module, AutoCSR):
 
         # RX Datapath.
         # ------------
-        self.submodules.rx_conv_x1 = rx_conv_x1 = ClockDomainsRenamer("rfic")(stream.Converter(16, 32))
-        self.submodules.rx_conv    = rx_conv    = ClockDomainsRenamer("rfic")(stream.Converter(32, 64))
-        self.submodules.rx_pattern = rx_pattern = RXPatternChecker()
-        self.submodules.rx_cdc     = rx_cdc     = stream.ClockDomainCrossing([("data", 64)], cd_from="rfic", cd_to="sys")
+        self.rx_conv_x1 = rx_conv_x1 = ClockDomainsRenamer("rfic")(stream.Converter(16, 32))
+        self.rx_conv    = rx_conv    = ClockDomainsRenamer("rfic")(stream.Converter(32, 64))
+        self.rx_pattern = rx_pattern = RXPatternChecker()
+        self.rx_cdc     = rx_cdc     = stream.ClockDomainCrossing([("data", 64)], cd_from="rfic", cd_to="sys")
         self.comb += rx_conv.source.connect(rx_cdc.sink)
         self.comb += rx_cdc.source.connect(self.source)
 
