@@ -340,12 +340,12 @@ void deinterleave(const int8_t *src, void *dst, uint32_t len, std::string format
         }
     }
     else if (format == SOAPY_SDR_CF32) {
-        float *samples_cf32 = ((float *)dst) + offset;
+        float *samples_cf32 = ((float *)dst) + (offset * 2);
         int16_t *src_int16 = (int16_t *)src;
-        for (uint32_t i = offset * BYTES_PER_SAMPLE; i < len; i++)
+        for (uint32_t i = 0; i < len; i ++)
         {
-            samples_cf32[0] = (float)(src_int16[i * 4] / 2047.0);
-            samples_cf32[1] = (float)(src_int16[i * 4 + 1] / 2047.0);
+            samples_cf32[0] = (float)src_int16[i*4] / 2047.0;
+            samples_cf32[1] = (float)src_int16[i*4 + 1] / 2047.0;
 			samples_cf32 += 2;
         }
     }
@@ -405,7 +405,8 @@ int SoapyLiteXXTRX::readStream(
         // Read out channels
         for (size_t i = 0; i < _rx_stream.channels.size(); i++)
         {
-            deinterleave(_rx_stream.remainderBuff + _rx_stream.remainderOffset * BYTES_PER_SAMPLE, buffs[i], n/2, _rx_stream.format, _rx_stream.channels[i]);
+            deinterleave(_rx_stream.remainderBuff + (_rx_stream.remainderOffset * BYTES_PER_SAMPLE * 2 * 2) + (_rx_stream.channels[i] * BYTES_PER_SAMPLE * 2),
+                buffs[i], n, _rx_stream.format, 0);
         }
         _rx_stream.remainderSamps -= n;
         _rx_stream.remainderOffset += n;
@@ -441,7 +442,8 @@ int SoapyLiteXXTRX::readStream(
     // Read out channels
     for (size_t i = 0; i < _rx_stream.channels.size(); i++)
     {
-        deinterleave(_rx_stream.remainderBuff, buffs[i], n, _rx_stream.format, samp_avail + _rx_stream.channels[i]);
+        deinterleave(_rx_stream.remainderBuff + (_rx_stream.channels[i] * BYTES_PER_SAMPLE * 2),
+            buffs[i], n, _rx_stream.format, samp_avail);
     }
     _rx_stream.remainderSamps -= n;
     _rx_stream.remainderOffset += n;
