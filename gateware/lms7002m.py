@@ -88,13 +88,21 @@ class TXPatternGenerator(LiteXModule):
             CSRField("enable", size=1, offset=0, values=[
                 ("``0b0``", "Disable Generator."),
                 ("``0b1``", "Enable Generator.")
+            ], reset=0),
+            CSRField("iq_inhibited", size=2, offset=8, values=[
+                ("``0b00``", "Normal Operations."),
+                ("``0b01``", "I Data inhibited (zeroes)."),
+                ("``0b10``", "Q Data inhibited (zeroes)."),
+                ("``0b11``", "I and Q Data Inhibited (zeroes).")
             ], reset=0)
         ])
 
         # # #
 
-        enable = Signal()
+        enable       = Signal()
+        iq_inhibited = Signal(2)
         self.specials += MultiReg(self.control.fields.enable, enable, "rfic")
+        self.specials += MultiReg(self.control.fields.iq_inhibited, iq_inhibited, "rfic")
 
         # Control-Path.
         # -------------
@@ -119,8 +127,16 @@ class TXPatternGenerator(LiteXModule):
         # Data-Path.
         # ----------
         self.sync.rfic += [
-            self.source.data[ 0:16].eq(count[ 0:12]),
-            self.source.data[16:32].eq(count[12:24]),
+            If(iq_inhibited[0],
+                self.source.data[ 0:16].eq(Constant(0, 16))
+            ).Else(
+                self.source.data[ 0:16].eq(count[ 0:12])
+            ),
+            If(iq_inhibited[1],
+                self.source.data[16:32].eq(Constant(0, 16))
+            ).Else(
+                self.source.data[16:32].eq(count[12:24]),
+            ),
         ]
 
 
@@ -202,11 +218,17 @@ class LMS7002M(LiteXModule):
             CSRField("tx_x1_mode", size=1, offset=17, values=[
                 ("``0b0``", "X2 (Normal operation)."),
                 ("``0b1``", "X1."),
-            ]),
+            ], reset=0),
             CSRField("rx_x1_mode", size=1, offset=18, values=[
                 ("``0b0``", "X2 (Normal operation)."),
                 ("``0b1``", "X1."),
-            ]),
+            ], reset=0),
+            CSRField("channel_inhibit", size=2, offset=19, values=[
+                ("``0b00``", "A/B (Normal operation)."),
+                ("``0b01``", "Channel A inhibited(zeros)."),
+                ("``0b10``", "Channel B inhibited(zeros)."),
+                ("``0b11``", "Channels A/B inhibited(zeros)."),
+            ], reset=0),
         ])
         self.status   = CSRStatus(fields=[
             CSRField("rx_clk_active", size=1, offset=0, values=[
@@ -229,6 +251,11 @@ class LMS7002M(LiteXModule):
         )
 
         # # #
+
+        # Channels inhibit.
+        # ----------------
+        channel_inhibit = Signal(2)
+        self.specials += MultiReg(self.control.fields.channel_inhibit, channel_inhibit, "rfic")
 
         # TX/RX Data/Frame.
         # -----------------
@@ -480,7 +507,11 @@ class LMS7002M(LiteXModule):
                 If(self.control.fields.tx_rx_loopback_enable,
                     rx_conv.sink.valid.eq(1),
                     rx_conv.sink.last.eq(rx_frame != 0),
-                    rx_conv.sink.data.eq(tx_data & 0x0fff0fff)
+                    If(channel_inhibit[0] & ~rx_frame | channel_inhibit[1] & rx_frame,
+                       rx_conv.sink.data.eq(Constant(0, 32)),
+                    ).Else(
+                        rx_conv.sink.data.eq(tx_data & 0x0fff0fff)
+                    ),
                 # ... Or do RX -> UpConverter --> CDC --> DMA.
                 ).Else(
                     # RX X1 Mode.
