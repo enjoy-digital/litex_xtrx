@@ -49,6 +49,7 @@ located in *software/LMS7002M-driver*
 ```bash
 mkdir build
 cd build
+cmake ../
 make
 sudo make install
 ```
@@ -73,7 +74,7 @@ located in *software/soapysdr-xtrx*
 ```bash
 mkdir build
 cd build
-cmake -DCMAKE_INSTALL_PREFIX=/usr
+cmake ../ -DCMAKE_INSTALL_PREFIX=/usr
 make
 sudo make install
 ```
