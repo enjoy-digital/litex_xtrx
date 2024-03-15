@@ -13,7 +13,7 @@ AR=ar
 RANLIB=ranlib
 
 CFLAGS += -I./liblitepcie
-CFLAGS += -I../litepcie/kernel
+CFLAGS += -I../kernel
 
 LDFLAGS += $(LIBLITEPCIE)
 LDFLAGS += -L./liblitepcie -llitepcie
