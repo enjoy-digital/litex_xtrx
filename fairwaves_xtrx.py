@@ -133,11 +133,11 @@ class BaseSoC(SoCCore):
         with_rx_pattern = False
         with_tx_test    = False
         with_rxtx_loop  = False
-        with_analyzer   = False
+        with_analyzer   = True
 
         if with_analyzer:
             SoCCore.csr_map["analyzer"] = 30
-            with_rx_scope   = False
+            with_rx_scope   = True
             with_tx_scope   = False
             with_rxtx_scope = True
 
@@ -295,7 +295,6 @@ class BaseSoC(SoCCore):
             self.comb += self.rx_conv.source.connect(self.pcie_dma0.sink)
         else:
             self.comb += self.lms7002m.source.connect(self.pcie_dma0.sink)
-            with_rx_scope = False
 
         platform.add_false_path_constraints(self.crg.cd_sys.clk, self.lms7002m.cd_rfic.clk)
 
@@ -314,7 +313,7 @@ class BaseSoC(SoCCore):
 
             if with_rx_scope:
                 analyzer_signals += [
-                    self.pcie_dma0.sink,
+                    #self.pcie_dma0.sink,
                     self.pcie_dma0.writer.sink,
                 ]
 
