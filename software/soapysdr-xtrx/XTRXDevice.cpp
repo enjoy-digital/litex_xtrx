@@ -639,6 +639,7 @@ std::vector<std::string> SoapyLiteXXTRX::getStreamFormats(const int /*direction*
 {
     std::vector<std::string> formats;
     formats.push_back(SOAPY_SDR_CS16);
+    formats.push_back(SOAPY_SDR_CF32);
     return formats;
 }
 
