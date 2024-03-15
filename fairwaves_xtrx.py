@@ -294,7 +294,7 @@ class BaseSoC(SoCCore):
             self.comb += self.rx_conv.sink.data.eq(self.test_tx_pat.source.data & 0x0fff0fff)
             self.comb += self.rx_conv.source.connect(self.pcie_dma0.sink)
         else:
-            self.comb += self.lms7002m.source.connect(self.pcie_dma0.sink)
+            self.comb += self.lms7002m.source.connect(self.pcie_dma0.sink, omit={"last"})
 
         platform.add_false_path_constraints(self.crg.cd_sys.clk, self.lms7002m.cd_rfic.clk)
 
