@@ -31,7 +31,7 @@ apt install gnuradio gnuradio-dev soapysdr-tools libsoapysdr0.8 libsoapysdr-dev 
 
 #### kernel
 
-located in *software/litepcie-kernel-module*
+located in *software/litepcie/kernel*
 
 ```bash
 make clean
@@ -54,10 +54,10 @@ make
 sudo make install
 ```
 
-*litepcie-user-library*:
+*litepcie/user*:
 ------------------------
 
-located in *software/litepcie-user-library*
+located in *software/litepcie/user*
 
 ```bash
 make clean

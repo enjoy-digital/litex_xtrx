@@ -5,7 +5,7 @@
 
 # Link to the other checkouts in this repository by default
 # Override these if you want to do a "local" build
-#KERNEL_PATH ?= $(REPO_DIR)/software/litepcie-kernel-module
+#KERNEL_PATH ?= $(REPO_DIR)/software/litepcie/kernel
 #NVIDIA_PATH ?= $(REPO_DIR)/software/nvidia-driver
 #CROSS_COMPILE ?= gcc
 

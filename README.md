@@ -61,8 +61,8 @@ Build the Linux kernel driver and load it.
 Note that by default, the current live kernel will be built against, but you can cross-compile for a target kernel version by setting `USE_LIVE_KERNEL=false`.
 
 ```
-make -C software litepcie-kernel-module
-sudo software/litepcie-kernel-module/init.sh
+make -C software litepcie/kernel
+sudo software/litepcie/kernel/init.sh
 ```
 
 Note that if a thunderbolt carrier is in use, it may be necessary rescan the pci bus:
@@ -74,8 +74,8 @@ sudo bash -c 'echo "1" > /sys/bus/pci/rescan'
 Build the Linux user-space utilities and test them:
 
 ```
-make -C software litepcie-user-library -j$(nproc)
-cd build/litepcie-user-library
+make -C software litepcie/user -j$(nproc)
+cd build/litepcie/user
 ./litepcie_util info
 ./litepcie_util scratch_test
 ./litepcie_util dma_test
