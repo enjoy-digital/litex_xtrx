@@ -1,13 +1,9 @@
-                               _  ___________  _  __       __     ___
-                              | |/_/_  __/ _ \| |/_/_____ / /_ __/ (_)__ _
-                             _>  <  / / / , _/>  </___/ // / // / / / _ `/
-                            /_/|_|_/_/ /_/|_/_/|_|    \___/\_,_/_/_/\_,_/
-                             / ___/__  __ _  ___  __ __/ /___ _____  ___ _
-                            / /__/ _ \/  ' \/ _ \/ // / __/ // / _ \/ _ `/
-                            \___/\___/_/_/_/ .__/\_,_/\__/\_,_/_//_/\_, /
-                                          /_/                      /___/
-                                XTRX LiteX/LitePCIe based FPGA design
-                                      for Julia Computing.
+                          __   _ __      _  __    _  ___________  _  __
+                         / /  (_) /____ | |/_/___| |/_/_  __/ _ \| |/_/
+                        / /__/ / __/ -_)>  </___/>  <  / / / , _/>  <
+                       /____/_/\__/\__/_/|_|   /_/|_| /_/ /_/|_/_/|_|
+                      XTRX LiteX/LitePCIe based alternativeFPGA design
+                    Copyright (c) 2021-2024 Enjoy-Digital <enjoy-digital.fr>
 
 [> Intro
 --------
@@ -16,16 +12,6 @@ This project aims to recreate a FPGA design for the XTRX board with
 LiteX/LitePCIe:
 
 ![](https://user-images.githubusercontent.com/1450143/147348139-503834af-76d5-4172-8ca0-e323b719fa17.png)
-
-
-This Julia Computing remote contains support for GPU P2P operations.
-
-[> GPU Setup
-------------
-
-For P2P operation the [open source Nvidia drivers](https://github.com/NVIDIA/open-gpu-kernel-modules) are required.
-Note that we currently carry [our own patch for resizing the addressable memory space](https://github.com/NVIDIA/open-gpu-kernel-modules/pull/3), and until that is merged, the easiest thing to do is to build our fork of the driver, which can be done via `make -C software nvidia-driver`.
-
 
 [> Getting started
 ------------------
@@ -102,22 +88,7 @@ export SOAPY_SDR_PLUGIN_PATH="$(make -sC software print-soapysdr-plugin-path)"
 ```
 
 The above snippet sets `SOAPY_SDR_PLUGIN_PATH` so that any SoapySDR application
-can find the XTRX driver. This can be used to execute the example Julia scripts
-in this repository:
-
-```
-make -C software SoapySDR.jl
-
-cd software/scripts
-julia --project -e 'using Pkg; Pkg.instantiate()'
-julia --project test_pattern.jl
-```
-
-**NOTE**: sometimes, the SoapySDR driver doesn't properly initialize the SDR
-(indicated by `test_pattern.jl` reading only zeros, or `test_loopback.jl` only
-reporting under/overflows). This can be worked around by launching
-`litepcie_test` (e.g. `litepcie_test record /dev/null 1024`). Afterwards, the
-chip should be in a good state.
+can find the XTRX driver.
 
 There is also a modified version of LimeSuite available that makes it possible
 to interactively configure the LMS7002M:
