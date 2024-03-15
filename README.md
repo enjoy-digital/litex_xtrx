@@ -37,14 +37,14 @@ Build the design and flash it to the board:
 
 Build the Linux kernel and load it:
 ```
-cd software/kernel
+cd software/litepcie/kernel
 make
 sudo ./init.sh
 ```
 
 Build the Linux user-space utilities and test them:
 ```
-cd software/user
+cd software/litepcie/user
 make
 ./litepcie_util info
 ./litepcie_util scratch_test
