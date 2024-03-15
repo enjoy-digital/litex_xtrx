@@ -2,8 +2,9 @@
                          / /  (_) /____ | |/_/___| |/_/_  __/ _ \| |/_/
                         / /__/ / __/ -_)>  </___/>  <  / / / , _/>  <
                        /____/_/\__/\__/_/|_|   /_/|_| /_/ /_/|_/_/|_|
-                      XTRX LiteX/LitePCIe based alternativeFPGA design
-                    Copyright (c) 2021-2024 Enjoy-Digital <enjoy-digital.fr>
+                      XTRX LiteX/LitePCIe based alternative FPGA design
+                          Copyright (c) 2021-2024 Enjoy-Digital.
+                          Copyright (c) 2021-2022 Julia Computing.
 
 [> Intro
 --------
