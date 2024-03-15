@@ -16,7 +16,7 @@ STEP = 2;
 aa1 = a(1:STEP:end);
 aa2 = a(2:STEP:end);
 plot(aa1, 'r', aa2, 'g');
-figure()
-plot(aa1, 'r');
-figure()
-plot(aa2, 'g');
+%figure()
+%plot(aa1, 'r');
+%figure()
+%plot(aa2, 'g');
