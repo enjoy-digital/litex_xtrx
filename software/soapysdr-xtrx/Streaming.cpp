@@ -346,7 +346,7 @@ void deinterleave(const int8_t *src, void *dst, uint32_t len, std::string format
         {
             samples_cf32[0] = (float)src_int16[i*4] / 2047.0;
             samples_cf32[1] = (float)src_int16[i*4 + 1] / 2047.0;
-			samples_cf32 += 2;
+            samples_cf32 += 2;
         }
     }
     else {
@@ -365,11 +365,14 @@ void interleave(const void *src, int8_t *dst, uint32_t len, std::string format, 
         }
     }
     else if (format == SOAPY_SDR_CF32) {
-        float *samples_cf32 = (float *)src + offset * BYTES_PER_SAMPLE;
-        for (uint32_t i = offset; i < len/BYTES_PER_SAMPLE; i++)
+        float *samples_cf32 = ((float *)src) + (offset * 2);
+        int16_t *dst_int16 = (int16_t *)dst;
+        for (uint32_t i = 0; i < len; i++)
         {
-            ((int16_t *)dst)[i * BYTES_PER_SAMPLE] = (int16_t)(((float *)samples_cf32)[i * BYTES_PER_SAMPLE] * 2047.0);
-            ((int16_t *)dst)[i * BYTES_PER_SAMPLE + 1] = (int16_t)(((float *)samples_cf32)[i * BYTES_PER_SAMPLE + 1] * 2047.0);
+            dst_int16[0] = (int16_t)(((float *)samples_cf32)[0] /** 2047.0*/);
+            dst_int16[1] = (int16_t)(((float *)samples_cf32)[1] /** 2047.0*/);
+            samples_cf32 += 2;
+            dst_int16 += 4;
         }
     }
     else {
@@ -390,12 +393,14 @@ int SoapyLiteXXTRX::readStream(
         return SOAPY_SDR_NOT_SUPPORTED;
     }
     size_t returnedElems = std::min(numElems, this->getStreamMTU(stream));
+    const uint32_t cplx_size = BYTES_PER_SAMPLE * 2;
 
     size_t samp_avail = 0;
 
     if (_rx_stream.remainderHandle >= 0)
     {
         const size_t n = std::min(_rx_stream.remainderSamps, returnedElems);
+        const uint32_t remainderOffset = _tx_stream.remainderOffset * cplx_size * 2;
 
         if (n < returnedElems)
         {
@@ -405,7 +410,7 @@ int SoapyLiteXXTRX::readStream(
         // Read out channels
         for (size_t i = 0; i < _rx_stream.channels.size(); i++)
         {
-            deinterleave(_rx_stream.remainderBuff + (_rx_stream.remainderOffset * BYTES_PER_SAMPLE * 2 * 2) + (_rx_stream.channels[i] * BYTES_PER_SAMPLE * 2),
+            deinterleave(_rx_stream.remainderBuff + (remainderOffset + _rx_stream.channels[i] * cplx_size),
                 buffs[i], n, _rx_stream.format, 0);
         }
         _rx_stream.remainderSamps -= n;
@@ -442,7 +447,7 @@ int SoapyLiteXXTRX::readStream(
     // Read out channels
     for (size_t i = 0; i < _rx_stream.channels.size(); i++)
     {
-        deinterleave(_rx_stream.remainderBuff + (_rx_stream.channels[i] * BYTES_PER_SAMPLE * 2),
+        deinterleave(_rx_stream.remainderBuff + (_rx_stream.channels[i] * cplx_size),
             buffs[i], n, _rx_stream.format, samp_avail);
     }
     _rx_stream.remainderSamps -= n;
@@ -472,6 +477,7 @@ int SoapyLiteXXTRX::writeStream(
     }
 
     size_t returnedElems = std::min(numElems, this->getStreamMTU(stream));
+    const uint32_t cplx_size = BYTES_PER_SAMPLE * 2;
 
     size_t samp_avail = 0;
 
@@ -479,6 +485,7 @@ int SoapyLiteXXTRX::writeStream(
     {
 
         const size_t n = std::min(_tx_stream.remainderSamps, returnedElems);
+        const uint32_t remainderOffset = _tx_stream.remainderOffset * cplx_size * 2;
 
         if (n < returnedElems)
         {
@@ -488,7 +495,8 @@ int SoapyLiteXXTRX::writeStream(
         // Write out channels
         for (size_t i = 0; i < _tx_stream.channels.size(); i++)
         {
-            interleave(buffs[i], _tx_stream.remainderBuff + _tx_stream.remainderOffset * BYTES_PER_SAMPLE, n/2, _tx_stream.format, _tx_stream.channels[i]);
+            interleave(buffs[i], _tx_stream.remainderBuff + remainderOffset + ((cplx_size * _tx_stream.channels[i])),
+                n, _tx_stream.format, 0);
         }
         _tx_stream.remainderSamps -= n;
         _tx_stream.remainderOffset += n;
@@ -524,7 +532,8 @@ int SoapyLiteXXTRX::writeStream(
     // Write out channels
     for (size_t i = 0; i < _tx_stream.channels.size(); i++)
     {
-        interleave(buffs[i], _tx_stream.remainderBuff, n, _tx_stream.format, samp_avail + _tx_stream.channels[i]);
+        interleave(buffs[i], _tx_stream.remainderBuff + (cplx_size * _tx_stream.channels[i]), n, _tx_stream.format,
+            samp_avail);
     }
     _tx_stream.remainderSamps -= n;
     _tx_stream.remainderOffset += n;
