@@ -369,8 +369,8 @@ void interleave(const void *src, int8_t *dst, uint32_t len, std::string format, 
         int16_t *dst_int16 = (int16_t *)dst;
         for (uint32_t i = 0; i < len; i++)
         {
-            dst_int16[0] = (int16_t)(((float *)samples_cf32)[0] /** 2047.0*/);
-            dst_int16[1] = (int16_t)(((float *)samples_cf32)[1] /** 2047.0*/);
+            dst_int16[0] = (int16_t)(((float *)samples_cf32)[0] * 2047.0);
+            dst_int16[1] = (int16_t)(((float *)samples_cf32)[1] * 2047.0);
             samples_cf32 += 2;
             dst_int16 += 4;
         }
