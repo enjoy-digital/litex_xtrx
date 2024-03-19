@@ -26,7 +26,7 @@ git clone --recursive https://github.com/enjoy-digital/litex_xtrx
 #### Prerequisites
 
 ```bash
-apt install gnuradio gnuradio-dev soapysdr-tools libsoapysdr0.8 libsoapysdr-dev libgnuradio-soapy3.10.9
+apt install gnuradio gnuradio-dev soapysdr-tools libsoapysdr0.8 libsoapysdr-dev libgnuradio-soapy3.10.1
 ```
 
 #### kernel
