@@ -35,6 +35,15 @@ Build the design and flash it to the board:
 ./fairwaves_xtrx.py --build --flash --driver
 ```
 
+Reboot or Rescan PCIe Bus (Optional):
+```
+echo 1 | sudo tee /sys/bus/pci/devices/0000\:0X\:00.0/remove (replace X with actual value)
+echo 1 | sudo tee /sys/bus/pci/rescan
+```
+
+`0X:00.0 Memory controller: Xilinx Corporation Device 7022` should then be seen with lspci.
+
+
 Build the Linux kernel and load it:
 ```
 cd software/litepcie/kernel
