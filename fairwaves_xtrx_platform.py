@@ -7,7 +7,7 @@
 # https://www.crowdsupply.com/fairwaves/xtrx
 
 from litex.build.generic_platform import *
-from litex.build.xilinx import XilinxPlatform
+from litex.build.xilinx import Xilinx7SeriesPlatform
 from litex.build.openfpgaloader import OpenFPGALoader
 
 # IOs ----------------------------------------------------------------------------------------------
@@ -173,20 +173,18 @@ _io = [
 
 # Platform -----------------------------------------------------------------------------------------
 
-class Platform(XilinxPlatform):
+class Platform(Xilinx7SeriesPlatform):
     default_clk_name   = "clk60"
     default_clk_period = 1e9/60e6
-    dev_string = ""
-    dev_short_string = ""
 
-    def __init__(self, variant="xc7a50t"):
+    def __init__(self, variant="xc7a50t", toolchain="vivado"):
         assert variant in ["xc7a35t", "xc7a50t"]
         self.variant = variant
         device = {
             "xc7a35t" : "xc7a35tcpg236-3",
             "xc7a50t" : "xc7a50tcpg236-2",
         }[variant]
-        XilinxPlatform.__init__(self, device, _io, toolchain="vivado")
+        Xilinx7SeriesPlatform.__init__(self, "xc7a50tcpg236-2", _io, toolchain=toolchain)
 
         self.toolchain.bitstream_commands = [
             "set_property BITSTREAM.CONFIG.UNUSEDPIN Pulldown [current_design]",
@@ -195,9 +193,6 @@ class Platform(XilinxPlatform):
             "set_property BITSTREAM.CONFIG.CONFIGRATE 66 [current_design]",
             "set_property BITSTREAM.GENERAL.COMPRESS TRUE [current_design]",
             "set_property BITSTREAM.CONFIG.SPI_FALL_EDGE YES [current_design]",
-            #"set_property BITSTREAM.config.SPI_opcode 0x6B [current_design ]",
-
-            # Xilinx tools ask for this
             "set_property CFGBVS VCCO [current_design]",
             "set_property CONFIG_VOLTAGE 3.3 [current_design]",
         ]
@@ -221,5 +216,5 @@ class Platform(XilinxPlatform):
         return OpenFPGALoader(cable="digilent_hs2", fpga_part=f"{self.variant}cpg236", freq=10e6)
 
     def do_finalize(self, fragment):
-        XilinxPlatform.do_finalize(self, fragment)
+        Xilinx7SeriesPlatform.do_finalize(self, fragment)
         self.add_period_constraint(self.lookup_request("clk60", loose=True), 1e9/60e6)
