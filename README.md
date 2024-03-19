@@ -68,7 +68,7 @@ echo 1 | sudo tee /sys/bus/pci/rescan
 #### [> Build and load Linux Kernel Module
 Build the Linux kernel and load it:
 ```bash
-cd software/litepcie/kernel
+cd software/kernel
 make
 sudo ./init.sh
 ```
