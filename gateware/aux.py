@@ -6,14 +6,15 @@
 
 from migen import *
 
+from litex.gen import *
+
 from litex.soc.interconnect.csr import *
-from litex.soc.interconnect import stream
 
 from litex.soc.cores.spi import SPIMaster
 
-# AUX ---------------------------------------------------------------------------------------------
+# AUX ----------------------------------------------------------------------------------------------
 
-class AUX(Module, AutoCSR):
+class AUX(LiteXModule):
     def __init__(self, pads):
         # CSRs.
         self.control = CSRStorage(fields=[

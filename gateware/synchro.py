@@ -7,13 +7,15 @@
 from migen import *
 from migen.genlib.cdc import MultiReg
 
+from litex.gen import *
+
 from litex.build.io import DDROutput
 
 from litex.soc.interconnect.csr import *
 
 # Synchro ------------------------------------------------------------------------------------------
 
-class Synchro(Module, AutoCSR):
+class Synchro(LiteXModule):
     def __init__(self, pads):
         self.control = CSRStorage(fields=[
             CSRField("int_source", offset=0, size=4, values=[

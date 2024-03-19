@@ -7,11 +7,13 @@
 from migen import *
 from migen.genlib.cdc import PulseSynchronizer
 
+from litex.gen import *
+
 from litex.soc.interconnect.csr import *
 
 # RF Switches --------------------------------------------------------------------------------------
 
-class RFSwitches(Module, AutoCSR):
+class RFSwitches(LiteXModule):
     def __init__(self, pads):
         self.tx = CSRStorage()
         self.rx = CSRStorage(2)

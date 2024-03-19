@@ -7,11 +7,13 @@
 from migen import *
 from migen.genlib.cdc import PulseSynchronizer
 
+from litex.gen import *
+
 from litex.soc.interconnect.csr import *
 
 # VCTCXO --------------------------------------------------------------------------------------------
 
-class VCTCXO(Module, AutoCSR):
+class VCTCXO(LiteXModule):
     def __init__(self, pads):
         self.control = CSRStorage(fields=[
             CSRField("sel", size=1, offset=0, values=[
@@ -31,19 +33,11 @@ class VCTCXO(Module, AutoCSR):
         # Drive Control Pins.
         self.comb += [
             pads.sel.eq(self.control.fields.sel),
-            pads.en.eq(1)
-            # TODO:
-            # The stock firmware has the above pin on a CSR.
-            # Uncommenting the line below leads to the VCTCXO counter
-            # failing to initialize.
-            # Oddly, the reset value for 'en' does not seem to be respected either, though
-            # the generated Verilog code has the correct value.
-            # This also leads to X values on all values probed via litescope
-            #pads.en.eq(self.control.fields.en)
+            pads.en.eq(1), # FIXME: Add dynamic control and check original firmware.
         ]
 
         # Clock Input.
-        self.clock_domains.cd_txco = ClockDomain("vctcxo")
+        self.cd_txco = ClockDomain("vctcxo")
         self.comb += self.cd_txco.clk.eq(pads.clk)
 
         # Cycles Count.

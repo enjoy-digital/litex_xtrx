@@ -7,12 +7,14 @@
 from migen import *
 from migen.genlib.cdc import MultiReg
 
+from litex.gen import *
+
 from litex.soc.interconnect.csr import *
 from litex.soc.cores.uart import UARTPHY, UART
 
 # GPS ----------------------------------------------------------------------------------------------
 
-class GPS(Module, AutoCSR):
+class GPS(LiteXModule):
     def __init__(self, pads, sys_clk_freq, baudrate=9600):
         self.control = CSRStorage(fields=[
             CSRField("enable", size=1, offset=0, values=[
@@ -31,5 +33,5 @@ class GPS(Module, AutoCSR):
         self.specials += MultiReg(pads.pps, self.pps)
 
         # UART.
-        self.submodules.uart_phy = UARTPHY(pads, sys_clk_freq, baudrate=baudrate)
-        self.submodules.uart     = UART(self.uart_phy, rx_fifo_rx_we=True)
+        self.uart_phy = UARTPHY(pads, sys_clk_freq, baudrate=baudrate)
+        self.uart     = UART(self.uart_phy, rx_fifo_rx_we=True)
