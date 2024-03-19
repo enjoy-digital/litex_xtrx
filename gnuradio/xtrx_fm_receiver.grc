@@ -56,8 +56,8 @@ blocks:
     rangeType: float
     start: int(80e6)
     step: int(1e3)
-    stop: int(100e6)
-    value: int(88.6e6)
+    stop: int(120e6)
+    value: int(99.4e6)
     widget: counter_slider
   states:
     bus_sink: false
@@ -91,7 +91,7 @@ blocks:
   id: variable
   parameters:
     comment: ''
-    value: '1536000'
+    value: 3.84e6
   states:
     bus_sink: false
     bus_source: false
@@ -104,11 +104,11 @@ blocks:
   parameters:
     affinity: ''
     alias: ''
-    audio_decimation: '8'
+    audio_decimation: '4'
     comment: ''
     maxoutbuf: '0'
     minoutbuf: '0'
-    quad_rate: samp_rate/8
+    quad_rate: samp_rate/5
   states:
     bus_sink: false
     bus_source: false
@@ -125,7 +125,7 @@ blocks:
     device_name: default
     num_inputs: '1'
     ok_to_block: 'True'
-    samp_rate: int(samp_rate/8)
+    samp_rate: int(samp_rate/5/4)
   states:
     bus_sink: false
     bus_source: false
@@ -141,7 +141,7 @@ blocks:
     beta: '6.76'
     comment: ''
     cutoff_freq: '100000'
-    decim: '8'
+    decim: '5'
     gain: '1'
     interp: '1'
     maxoutbuf: '0'
@@ -268,4 +268,3 @@ connections:
 
 metadata:
   file_format: 1
-  grc_version: 3.10.9.2
