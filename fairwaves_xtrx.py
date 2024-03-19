@@ -14,7 +14,7 @@ import subprocess
 from migen import *
 from migen.fhdl.specials import Tristate
 
-import fairwaves_xtrx_platform as fairwaves_xtrx
+from litex_boards.platforms import fairwaves_xtrx
 
 from litex.soc.interconnect.csr import *
 from litex.soc.interconnect import stream
