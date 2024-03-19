@@ -1,4 +1,4 @@
-// This file is Copyright (c) 2020-2021 Florent Kermarrec <florent@enjoy-digital.fr>
+// This file is Copyright (c) 2021-2024 Enjoy-Digital <enjoy-digital.fr>
 // License: BSD
 
 #include <stdio.h>

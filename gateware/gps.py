@@ -1,7 +1,7 @@
 #
-# This file is part of XTRX-Julia.
+# This file is part of LiteX-XTRX.
 #
-# Copyright (c) 2021 Florent Kermarrec <florent@enjoy-digital.fr>
+# Copyright (c) 2021-2024 Enjoy-Digital <enjoy-digital.fr>
 # SPDX-License-Identifier: BSD-2-Clause
 
 from migen import *
