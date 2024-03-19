@@ -124,8 +124,8 @@ class BaseSoC(SoCCore):
         "synchro"     : 28,
     }
 
-    def __init__(self, sys_clk_freq=int(125e6), with_cpu=True, cpu_firmware=None, with_jtagbone=True, with_analyzer=True, nonpro=False, address_width=64):
-        platform = fairwaves_xtrx.Platform(nonpro=nonpro)
+    def __init__(self, sys_clk_freq=int(125e6), variant="xc7a50t", with_cpu=True, cpu_firmware=None, with_jtagbone=True, with_analyzer=True, address_width=64):
+        platform = fairwaves_xtrx.Platform(variant=variant)
 
         git_sha = subprocess.check_output(['git', 'rev-parse', '--short', 'HEAD']).strip().decode('utf-8')
         git_dirty = "-dirty" if len(subprocess.check_output(['git', 'diff'])) != 0 else ""
@@ -201,7 +201,7 @@ class BaseSoC(SoCCore):
             #cd         = "sys"
         )
         self.add_pcie(phy=self.pcie_phy, address_width=address_width, ndmas=1,
-            with_dma_buffering    = True, dma_buffering_depth=8192 if nonpro else 16384,
+            with_dma_buffering    = True, dma_buffering_depth=8192,
             with_dma_loopback     = True,
             with_dma_synchronizer = True,
             with_msi              = True
@@ -359,11 +359,11 @@ class BaseSoC(SoCCore):
 
 def main():
     parser = argparse.ArgumentParser(description="LiteX SoC on Fairwaves XTRX")
+    parser.add_argument("--variant", default="xc7a50t", help="Select XTRX variant (xc7a50t aka pro or xc7a35t aka non-pro).")
     parser.add_argument("--build",  action="store_true", help="Build bitstream")
     parser.add_argument("--load",   action="store_true", help="Load bitstream")
     parser.add_argument("--flash",  action="store_true", help="Flash bitstream")
     parser.add_argument("--address_width",  action="store", default=64, help="PCIe Address Width 64/32")
-    parser.add_argument("--nonpro",  action="store_true", help="Generate a bitstream for the non-pro XTRX using the 35T FPGA")
     parser.add_argument("--driver", action="store_true", help="Generate PCIe driver from LitePCIe (override local version).")
     args = parser.parse_args()
 
@@ -371,7 +371,7 @@ def main():
     for run in range(2):
         prepare = (run == 0)
         build   = ((run == 1) & args.build)
-        soc = BaseSoC(cpu_firmware=None if prepare else "firmware/firmware.bin", nonpro=args.nonpro, address_width=int(args.address_width))
+        soc = BaseSoC(cpu_firmware=None if prepare else "firmware/firmware.bin", variant=args.variant, address_width=int(args.address_width))
         builder = Builder(soc, csr_csv="csr.csv")
         builder.build(run=build)
         if prepare:

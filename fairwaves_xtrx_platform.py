@@ -179,16 +179,14 @@ class Platform(XilinxPlatform):
     dev_string = ""
     dev_short_string = ""
 
-    def __init__(self, nonpro=False):
-        # Pro and non-Pro boards have different FPGA part numbers, but same pins
-        if nonpro:
-            self.dev_string = "xc7a35tcpg236-3"
-            self.dev_short_string = "a35t"
-        else:
-            self.dev_string = "xc7a50tcpg236-2"
-            self.dev_short_string = "a50t"
-
-        XilinxPlatform.__init__(self, self.dev_string, _io, toolchain="vivado")
+    def __init__(self, variant="xc7a50t"):
+        assert variant in ["xc7a35t", "xc7a50t"]
+        self.variant = variant
+        device = {
+            "xc7a35t" : "xc7a35tcpg236-3",
+            "xc7a50t" : "xc7a50tcpg236-2",
+        }[variant]
+        XilinxPlatform.__init__(self, device, _io, toolchain="vivado")
 
         self.toolchain.bitstream_commands = [
             "set_property BITSTREAM.CONFIG.UNUSEDPIN Pulldown [current_design]",
@@ -220,7 +218,7 @@ class Platform(XilinxPlatform):
         ]
 
     def create_programmer(self):
-        return OpenFPGALoader(cable="digilent_hs2", fpga_part=f"xc7{self.dev_short_string}cpg236", freq=10e6)
+        return OpenFPGALoader(cable="digilent_hs2", fpga_part=f"{self.variant}cpg236", freq=10e6)
 
     def do_finalize(self, fragment):
         XilinxPlatform.do_finalize(self, fragment)
