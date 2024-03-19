@@ -628,6 +628,7 @@ std::vector<double> SoapyLiteXXTRX::listSampleRates(const int direction,
         rates.push_back(baseRate / (1 << i));
     }
     // GGM: hack
+    rates.push_back(30720000/8);
     rates.push_back(30720000/4);
     rates.push_back(30720000/2);
     rates.push_back(30720000);
