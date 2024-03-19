@@ -16,43 +16,46 @@ LiteX/LitePCIe:
 
 [> Getting started
 ------------------
-### [> Installing LiteX:
+#### [> Installing LiteX:
 
 LiteX can be installed by following the installation instructions from the LiteX Wiki: https://github.com/enjoy-digital/litex/wiki/Installation
 
-### [> Installing the RISC-V toolchain for the Soft-CPU:
+#### [> Installing the RISC-V toolchain for the Soft-CPU:
 
 To get and install a RISC-V toolchain, please install it manually of follow the LiteX's wiki: https://github.com/enjoy-digital/litex/wiki/Installation:
 ```bash
 ./litex_setup.py --gcc=riscv
 ```
-### [> Clone repository:
+#### [> Clone repository:
 
 ```bash
 git clone --recursive https://github.com/enjoy-digital/litex_xtrx
 ```
 
-### [> Software Prerequisites
+#### [> Software Prerequisites
 
 ```bash
 apt install gnuradio gnuradio-dev soapysdr-tools libsoapysdr0.8 libsoapysdr-dev libgnuradio-soapy3.10.1
 ```
 
-[> Build and Test the design(s)
--------------------------------
+[> Build and Test the design
+----------------------------
+
+#### [> Build and Flash the design
 
 Build the design and flash it to the board:
 ```bash
 ./fairwaves_xtrx.py --build --flash [--driver]
 ```
 
-**NOTE:** python script may be modified for test purpose
+>Notes: python script may be modified for test purpose
 - `with_analyzer` to enable/disable *litescope* support
 - `with_rx_pattern` to replace *lms7002* rx stream by a pattern generator + a converter 32 -> 64
 - `with_tx_pattern` to cut *DMA* -> *lms7002* TX stream and to replace by a converter 64->32 always ready
 - `with_rx_scope` (must be enabled at the same time at `with_rx_pattern` and `with_analyzer` to have access to rx signals (pattern generator, dma sink and writer sink);
 - `with_tx_scope` (must be enabled at the same time at `with_tx_pattern` and `with_analyzer` to have access to tx signals dma source and reader source and converter source);
 
+#### [> Check Board Presence
 Reboot or Rescan PCIe Bus (Optional):
 ```bash
 echo 1 | sudo tee /sys/bus/pci/devices/0000\:0X\:00.0/remove (replace X with actual value)
@@ -62,6 +65,7 @@ echo 1 | sudo tee /sys/bus/pci/rescan
 `0X:00.0 Memory controller: Xilinx Corporation Device 7022` should then be seen with lspci.
 
 
+#### [> Build and load Linux Kernel Module
 Build the Linux kernel and load it:
 ```bash
 cd software/litepcie/kernel
@@ -69,14 +73,7 @@ make
 sudo ./init.sh
 ```
 
-Build the Linux user-space utilities and test them:
-```bash
-cd software/litepcie/user
-make
-./litepcie_util info
-./litepcie_util scratch_test
-./litepcie_util dma_test
-```
+#### [> Test Firmware
 
 The firmware is automatically integrated in the SoC during the build and can be executed with:
 ```bash
@@ -90,7 +87,7 @@ make
 sudo litex_term /dev/ttyLXU0 --kernel=firmware.bin --safe
 ```
 
-Install modified LMS7002M-driver:
+#### [> Install LMS7002M Driver
 ```bash
 cd software/LMS7002M-driver
 mkdir build
@@ -100,8 +97,7 @@ make
 sudo make install
 ```
 
-
-Install SoapySDR Driver:
+#### [> Install SoapySDR Driver
 ```bash
 cd software/soapysdr-xtrx
 mkdir build
@@ -111,15 +107,15 @@ make
 sudo make install
 ```
 
-Test SoapySDR Driver:
+Test driver with:
 
 `SoapySDRUtil --info`
 
-must contains:
+It must contains:
 - *Module found: /usr/lib/x86_64-linux-gnu/SoapySDR/modules0.8/libSoapyLiteXXTRX.so*
 - LiteXXTRX in *Available factories* list
 
-And command:
+And following commands should display similar results:
 ```bash
 SoapySDRUtil --find="driver=LiteXXTRX"
 ######################################################
@@ -133,11 +129,10 @@ Found device 0
   serial = 13245867a084854
 ```
 
-
 [> Use Apps
 -----------
 
-**LitePCIe Utils**
+#### [> LitePCIe Utils
 
 Identification
 
@@ -172,7 +167,7 @@ DMA_SPEED(Gbps) TX_BUFFERS      RX_BUFFERS      DIFF    ERRORS
           6.86       26400           26272       128         0
 ```
 
-**LimeSuite**
+#### [> LimeSuite
 
 Get/Use modified LimeSuite:
 ```
@@ -215,7 +210,7 @@ make
 ./litex_xtrx_util dma_test -e -w 12
 ```
 
-**LiteScope**
+#### [> LiteScope
 
 LiteScope:
 ```
@@ -223,10 +218,10 @@ litex_server --jtag --jtag-config=openocd_xc7_ft232.cfg
 litescope_cli
 ```
 
-**GNU Radio**
+#### [> GNU Radio
 
 Directory *app/gnuradio* provides some examples to test/use XTRX with soapysdr module: see *gnuradio/README.md*
 
 [> Contact
--------------
+----------
 E-mail: florent@enjoy-digital.fr
