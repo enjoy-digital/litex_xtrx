@@ -1,4 +1,4 @@
-BUILD_DIR?=../build/fairwaves_xtrx_platform/
+BUILD_DIR?=../build/fairwaves_xtrx/
 
 include $(BUILD_DIR)/software/include/generated/variables.mak
 include $(SOC_DIRECTORY)/software/common.mak

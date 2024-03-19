@@ -7,47 +7,49 @@
 # SPDX-License-Identifier: BSD-2-Clause
 
 import os
-import argparse
 import sys
+import argparse
 import subprocess
 
 from migen import *
 from migen.fhdl.specials import Tristate
+from migen.genlib.cdc    import MultiReg
+
+from litex.gen import *
 
 from litex_boards.platforms import fairwaves_xtrx
 
 from litex.soc.interconnect.csr import *
 from litex.soc.interconnect import stream
-from litex.soc.integration.soc_core import *
-from litex.soc.integration.builder import *
 
-from litex.soc.cores.clock import *
-from litex.soc.cores.led import LedChaser
-from litex.soc.cores.icap import ICAP
-from litex.soc.cores.gpio import GPIOOut
+from litex.soc.integration.soc_core import *
+from litex.soc.integration.builder  import *
+
+from litex.soc.cores.clock     import *
+from litex.soc.cores.led       import LedChaser
+from litex.soc.cores.icap      import ICAP
+from litex.soc.cores.gpio      import GPIOOut
 from litex.soc.cores.spi_flash import S7SPIFlash
-from litex.soc.cores.bitbang import I2CMaster
-from litex.soc.cores.spi import SPIMaster
-from litex.soc.cores.xadc import XADC
-from litex.soc.cores.dna  import DNA
+from litex.soc.cores.bitbang   import I2CMaster
+from litex.soc.cores.spi       import SPIMaster
+from litex.soc.cores.xadc      import XADC
+from litex.soc.cores.dna       import DNA
 
 from litepcie.phy.s7pciephy import S7PCIEPHY
 
 from litescope import LiteScopeAnalyzer
 
-from gateware.gpio import GPIO
-from gateware.aux import AUX
-from gateware.gps import GPS
-from gateware.vctcxo import VCTCXO
-from gateware.synchro import Synchro
+from gateware.gpio        import GPIO
+from gateware.aux         import AUX
+from gateware.gps         import GPS
+from gateware.vctcxo      import VCTCXO
+from gateware.synchro     import Synchro
 from gateware.rf_switches import RFSwitches
-from gateware.lms7002m import LMS7002M
+from gateware.lms7002m    import LMS7002M
 
 from software import generate_litepcie_software
 
-from migen.genlib.cdc import MultiReg
-
-class MYTXPatternGenerator(Module, AutoCSR):
+class MYTXPatternGenerator(LiteXModule): # FIXME: Integrate Pattern properly.
     def __init__(self):
         self.source  = stream.Endpoint([("data", 32)])
 
@@ -71,30 +73,32 @@ class MYTXPatternGenerator(Module, AutoCSR):
         # ----------
         self.sync += [
             self.source.data.eq(0),
-            self.source.data[ 0:12].eq(count[ 0:11]), # FIXME: sign extension
+            self.source.data[ 0:12].eq(count[ 0:11]), # FIXME: sign extension
             self.source.data[16:28].eq(count[ 0:11]), # FIXME: sign extension
         ]
 
-
 # CRG ----------------------------------------------------------------------------------------------
 
-class CRG(Module):
+class CRG(LiteXModule):
     def __init__(self, platform, sys_clk_freq):
-        self.clock_domains.cd_sys    = ClockDomain()
-        self.clock_domains.cd_idelay = ClockDomain()
+        self.cd_sys    = ClockDomain()
+        self.cd_idelay = ClockDomain()
 
         # # #
 
+        # Clk/Rst.
         assert sys_clk_freq == int(125e6)
         self.comb += self.cd_sys.clk.eq(ClockSignal("pcie"))
         self.comb += self.cd_sys.rst.eq(ResetSignal("pcie"))
 
-        self.submodules.pll = pll = S7PLL(speedgrade=-1)
+        # PLL.
+        self.pll = pll = S7PLL(speedgrade=-1)
         self.comb += pll.reset.eq(ResetSignal("pcie"))
         pll.register_clkin(ClockSignal("pcie"), 125e6)
         pll.create_clkout(self.cd_idelay, 200e6)
 
-        self.submodules.idelayctrl = S7IDELAYCTRL(self.cd_idelay)
+        # IDelayCtrl.
+        self.idelayctrl = S7IDELAYCTRL(self.cd_idelay)
 
 # BaseSoC -----------------------------------------------------------------------------------------
 
@@ -122,21 +126,24 @@ class BaseSoC(SoCCore):
         "lms7002m"    : 26,
         "xsync_spi"   : 27,
         "synchro"     : 28,
+
+        # Analyzer.
+        "analyzer"    : 30,
     }
 
-    def __init__(self, sys_clk_freq=int(125e6), variant="xc7a50t", with_cpu=True, cpu_firmware=None, with_jtagbone=True, with_analyzer=True, address_width=64):
+    def __init__(self, sys_clk_freq=int(125e6), variant="xc7a50t", with_cpu=True, cpu_firmware=None, with_jtagbone=True, with_analyzer=True):
         platform = fairwaves_xtrx.Platform(variant=variant)
 
+        # Git SHA/Dirty. CHECKME: See if useful.
         git_sha = subprocess.check_output(['git', 'rev-parse', '--short', 'HEAD']).strip().decode('utf-8')
         git_dirty = "-dirty" if len(subprocess.check_output(['git', 'diff'])) != 0 else ""
 
+        # Configuration: See if useful in longterm and integrate properly.
         with_rx_pattern = False
         with_tx_test    = False
         with_rxtx_loop  = False
         with_analyzer   = True
-
         if with_analyzer:
-            SoCCore.csr_map["analyzer"] = 30
             with_rx_scope   = True
             with_tx_scope   = False
             with_rxtx_scope = True
@@ -159,7 +166,7 @@ class BaseSoC(SoCCore):
         self.uart.add_auto_tx_flush(sys_clk_freq=sys_clk_freq, timeout=1, interval=128)
 
         # Clocking ---------------------------------------------------------------------------------
-        self.submodules.crg = CRG(platform, sys_clk_freq)
+        self.crg = CRG(platform, sys_clk_freq)
 
         # JTAGBone ---------------------------------------------------------------------------------
         if with_jtagbone:
@@ -168,39 +175,39 @@ class BaseSoC(SoCCore):
             platform.add_false_path_constraints(self.jtagbone_phy.cd_jtag.clk, self.crg.cd_sys.clk)
 
         # Leds -------------------------------------------------------------------------------------
-        self.submodules.leds = LedChaser(
+        self.leds = LedChaser(
             pads         = platform.request_all("user_led"),
             sys_clk_freq = sys_clk_freq
         )
-        self.submodules.leds2 = LedChaser(
+        self.leds2 = LedChaser(
             pads         = platform.request_all("user_led2"),
             sys_clk_freq = sys_clk_freq
         )
 
         # ICAP -------------------------------------------------------------------------------------
-        self.submodules.icap = ICAP()
+        self.icap = ICAP()
         self.icap.add_reload()
         self.icap.add_timing_constraints(platform, sys_clk_freq, self.crg.cd_sys.clk)
 
         # SPIFlash ---------------------------------------------------------------------------------
-        self.submodules.flash_cs_n = GPIOOut(platform.request("flash_cs_n"))
-        self.submodules.flash      = S7SPIFlash(platform.request("flash"), sys_clk_freq, 25e6)
+        self.flash_cs_n = GPIOOut(platform.request("flash_cs_n"))
+        self.flash      = S7SPIFlash(platform.request("flash"), sys_clk_freq, 25e6)
 
         # XADC -------------------------------------------------------------------------------------
-        self.submodules.xadc = XADC()
+        self.xadc = XADC()
 
         # DNA --------------------------------------------------------------------------------------
-        self.submodules.dna = DNA()
+        self.dna = DNA()
         self.dna.add_timing_constraints(platform, sys_clk_freq, self.crg.cd_sys.clk)
 
         # PCIe -------------------------------------------------------------------------------------
-        self.submodules.pcie_phy = S7PCIEPHY(platform, platform.request(f"pcie_x2"),
+        self.pcie_phy = S7PCIEPHY(platform, platform.request(f"pcie_x2"),
             data_width = 64,
             bar0_size  = 0x20000,
             cd         = "pcie"
             #cd         = "sys"
         )
-        self.add_pcie(phy=self.pcie_phy, address_width=address_width, ndmas=1,
+        self.add_pcie(phy=self.pcie_phy, address_width=32, ndmas=1,
             with_dma_buffering    = True, dma_buffering_depth=8192,
             with_dma_loopback     = True,
             with_dma_synchronizer = True,
@@ -211,16 +218,16 @@ class BaseSoC(SoCCore):
         # - Temperature Sensor (TMP108  @ 0x4a).
         # - PMIC-LMS           (LP8758  @ 0x60).
         # - VCTCXO DAC         Rev4: (MCP4725 @ 0x62) Rev5: (DAC60501 @ 0x4b).
-        self.submodules.i2c0 = I2CMaster(pads=platform.request("i2c", 0))
+        self.i2c0 = I2CMaster(pads=platform.request("i2c", 0))
 
         # I2C Bus1:
         # PMIC-FPGA (LP8758 @ 0x60).
-        self.submodules.i2c1 = I2CMaster(pads=platform.request("i2c", 1))
+        self.i2c1 = I2CMaster(pads=platform.request("i2c", 1))
 
         # XSYNC SPI Bus:
         xsync_spi_pads      = platform.request("xsync_spi")
         xsync_spi_pads.miso = Signal() # SPI is 3-wire, add fake MISO. Will only allow writes, not reads.
-        self.submodules.xsync_spi = SPIMaster(
+        self.xsync_spi = SPIMaster(
             pads         = xsync_spi_pads,
             data_width   = 32,
             sys_clk_freq = sys_clk_freq,
@@ -240,33 +247,34 @@ class BaseSoC(SoCCore):
         # Buck3: +1.5V  (used as input to 1.25V LDO for LMS analog 1.25V).
 
         # Aux -------------------------------------------------------------------------------------
-        self.submodules.aux = AUX(platform.request("aux"))
+        self.aux = AUX(platform.request("aux"))
 
         # GPIO -------------------------------------------------------------------------------------
-        #self.submodules.gpio = GPIO(platform.request("gpio"))
+        #self.gpio = GPIO(platform.request("gpio"))
 
         # GPS --------------------------------------------------------------------------------------
-        self.submodules.gps = GPS(platform.request("gps"), sys_clk_freq, baudrate=9600)
+        self.gps = GPS(platform.request("gps"), sys_clk_freq, baudrate=9600)
 
         # VCTCXO -----------------------------------------------------------------------------------
         vctcxo_pads = platform.request("vctcxo")
-        self.submodules.vctcxo = VCTCXO(vctcxo_pads)
+        self.vctcxo = VCTCXO(vctcxo_pads)
         platform.add_period_constraint(vctcxo_pads.clk, 20)
 
         # Synchro ----------------------------------------------------------------------------------
-        self.submodules.synchro = Synchro(platform.request("synchro"))
+        self.synchro = Synchro(platform.request("synchro"))
         self.comb += self.synchro.pps_gps.eq(self.gps.pps)
         self.comb += self.pcie_dma0.synchronizer.pps.eq(self.synchro.pps)
 
         # RF Switches ------------------------------------------------------------------------------
-        self.submodules.rf_switches = RFSwitches(platform.request("rf_switches"))
+        self.rf_switches = RFSwitches(platform.request("rf_switches"))
 
         # LMS7002M ---------------------------------------------------------------------------------
-        self.submodules.lms7002m = LMS7002M(platform, platform.request("lms7002m"), sys_clk_freq,
+        self.lms7002m = LMS7002M(platform, platform.request("lms7002m"), sys_clk_freq,
             tx_delay_init = 16,
             rx_delay_init = 16
         )
 
+        # FIXME: Too complicated to apprehend, simplify and integrate properly.
         if with_tx_test:
             self.tx0_i = Signal(16)
             self.tx0_q = Signal(16)
@@ -288,8 +296,8 @@ class BaseSoC(SoCCore):
             self.comb += self.pcie_dma0.source.connect(self.pcie_dma0.sink)
         elif with_rx_pattern:
             test_tx_pat = MYTXPatternGenerator()
-            self.submodules.test_tx_pat = test_tx_pat
-            self.submodules.rx_conv    = rx_conv    = stream.Converter(32, 64)
+            self.test_tx_pat = test_tx_pat
+            self.rx_conv    = rx_conv    = stream.Converter(32, 64)
             self.comb += self.test_tx_pat.source.connect(self.rx_conv.sink, omit={"data"})
             self.comb += self.rx_conv.sink.data.eq(self.test_tx_pat.source.data & 0x0fff0fff)
             self.comb += self.rx_conv.source.connect(self.pcie_dma0.sink)
@@ -340,7 +348,7 @@ class BaseSoC(SoCCore):
                     self.tx1_q,
                 ]
 
-            self.submodules.analyzer = LiteScopeAnalyzer(analyzer_signals,
+            self.analyzer = LiteScopeAnalyzer(analyzer_signals,
                 depth        = 128,
                 clock_domain = "sys",
                 register     = True,
@@ -359,11 +367,10 @@ class BaseSoC(SoCCore):
 
 def main():
     parser = argparse.ArgumentParser(description="LiteX SoC on Fairwaves XTRX")
-    parser.add_argument("--variant", default="xc7a50t", help="Select XTRX variant (xc7a50t aka pro or xc7a35t aka non-pro).")
-    parser.add_argument("--build",  action="store_true", help="Build bitstream")
-    parser.add_argument("--load",   action="store_true", help="Load bitstream")
-    parser.add_argument("--flash",  action="store_true", help="Flash bitstream")
-    parser.add_argument("--address_width",  action="store", default=64, help="PCIe Address Width 64/32")
+    parser.add_argument("--variant", default="xc7a50t",  help="Select XTRX variant (xc7a50t aka pro or xc7a35t aka non-pro).")
+    parser.add_argument("--build",  action="store_true", help="Build bitstream.")
+    parser.add_argument("--load",   action="store_true", help="Load bitstream.")
+    parser.add_argument("--flash",  action="store_true", help="Flash bitstream.")
     parser.add_argument("--driver", action="store_true", help="Generate PCIe driver from LitePCIe (override local version).")
     args = parser.parse_args()
 
@@ -371,7 +378,7 @@ def main():
     for run in range(2):
         prepare = (run == 0)
         build   = ((run == 1) & args.build)
-        soc = BaseSoC(cpu_firmware=None if prepare else "firmware/firmware.bin", variant=args.variant, address_width=int(args.address_width))
+        soc = BaseSoC(cpu_firmware=None if prepare else "firmware/firmware.bin", variant=args.variant)
         builder = Builder(soc, csr_csv="csr.csv")
         builder.build(run=build)
         if prepare:
