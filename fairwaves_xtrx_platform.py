@@ -8,7 +8,7 @@
 
 from litex.build.generic_platform import *
 from litex.build.xilinx import XilinxPlatform
-from litex.build.openocd import OpenOCD
+from litex.build.openfpgaloader import OpenFPGALoader
 
 # IOs ----------------------------------------------------------------------------------------------
 
@@ -220,7 +220,7 @@ class Platform(XilinxPlatform):
         ]
 
     def create_programmer(self):
-        return OpenOCD("openocd_xc7_ft232.cfg", "bscan_spi_xc7"+self.dev_short_string+".bit")
+        return OpenFPGALoader(cable="digilent_hs2", fpga_part=f"xc7{self.dev_short_string}cpg236", freq=10e6)
 
     def do_finalize(self, fragment):
         XilinxPlatform.do_finalize(self, fragment)
