@@ -3,6 +3,6 @@
 	url = https://github.com/JuliaComputing/LMS7002M-driver
 	shallow = true
 [submodule "software/limesuite"]
-	path = software/limesuite
+	path = app/limesuite
 	url = https://github.com/enjoy-digital/LimeSuite.git
 	shallow = true
