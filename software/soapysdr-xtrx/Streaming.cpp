@@ -410,7 +410,9 @@ int SoapyLiteXXTRX::readStream(
         // Read out channels
         for (size_t i = 0; i < _rx_stream.channels.size(); i++)
         {
-            deinterleave(_rx_stream.remainderBuff + (remainderOffset + _rx_stream.channels[i] * cplx_size),
+            uint32_t chan = (~_rx_stream.channels[i]) & 0x01;
+            printf("chan %d %d %d\n", i, _rx_stream.channels[i], chan);
+            deinterleave(_rx_stream.remainderBuff + (remainderOffset + chan * cplx_size),
                 buffs[i], n, _rx_stream.format, 0);
         }
         _rx_stream.remainderSamps -= n;
@@ -447,7 +449,8 @@ int SoapyLiteXXTRX::readStream(
     // Read out channels
     for (size_t i = 0; i < _rx_stream.channels.size(); i++)
     {
-        deinterleave(_rx_stream.remainderBuff + (_rx_stream.channels[i] * cplx_size),
+        uint32_t chan = (~_rx_stream.channels[i]) & 0x01;
+        deinterleave(_rx_stream.remainderBuff + (chan * cplx_size),
             buffs[i], n, _rx_stream.format, samp_avail);
     }
     _rx_stream.remainderSamps -= n;

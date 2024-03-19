@@ -153,7 +153,9 @@ SoapyLiteXXTRX::SoapyLiteXXTRX(const SoapySDR::Kwargs &args)
     LMS7002M_xbuf_share_tx(_lms, true);
 
     // turn the clocks on (tested frequencies: 61.44MHZ, 122.88MHZ)
-    this->setMasterClockRate(122.88e6);
+    //this->setMasterClockRate(122.88e6);
+    //this->setMasterClockRate(2*2*49.152e6);
+    this->setMasterClockRate(64e6*2);
 
     // some defaults to avoid throwing
     _cachedSampleRates[SOAPY_SDR_RX] = 1e6;
@@ -176,7 +178,7 @@ SoapyLiteXXTRX::SoapyLiteXXTRX(const SoapySDR::Kwargs &args)
         //     PGA Gain: 6dB
         //   TRF page:
         //     TXPAD gain control: 0
-        this->setGain(SOAPY_SDR_RX, i, "LNA", 30.0);
+        this->setGain(SOAPY_SDR_RX, i, "LNA", 32.0);
         this->setGain(SOAPY_SDR_RX, i, "TIA", 9.0);
         this->setGain(SOAPY_SDR_RX, i, "PGA", 6.0);
         this->setGain(SOAPY_SDR_TX, i, "PAD", 0.0);
@@ -584,13 +586,15 @@ void SoapyLiteXXTRX::setSampleRate(const int direction, const size_t,
 
     const double baseRate = this->getTSPRate(direction);
     const double factor = baseRate / rate;
+    int intFactor = 1 << int((std::log(factor) / std::log(2.0)) + 0.5);
     SoapySDR::logf(
-        SOAPY_SDR_DEBUG,
+        SOAPY_SDR_INFO,
         "SoapyLiteXXTRX::setSampleRate(%s, %f MHz), baseRate %f MHz, factor %f",
         dir2Str(direction), rate / 1e6, baseRate / 1e6, factor);
-    if (factor < 2.0)
+    if (intFactor < 2)
         throw std::runtime_error("SoapyLiteXXTRX::setSampleRate() -- rate too high");
-    int intFactor = 1 << int((std::log(factor) / std::log(2.0)) + 0.5);
+    intFactor = 1 << int((std::log(factor) / std::log(2.0)) + 0.5);
+    printf("inFactor %d\n", intFactor);
     if (intFactor > 32)
         throw std::runtime_error("SoapyLiteXXTRX::setSampleRate() -- rate too low");
 
@@ -625,13 +629,17 @@ std::vector<double> SoapyLiteXXTRX::listSampleRates(const int direction,
     std::vector<double> rates;
     // from baseRate/32 to baseRate/2
     for (int i = 5; i >= 1; i--) {
-        rates.push_back(baseRate / (1 << i));
+        rates.push_back(round(baseRate / (1 << i)));
     }
+    for (size_t i = 0; i < rates.size();i++)
+        printf("rate %lf\n", rates[i]);
     // GGM: hack
+    rates.push_back(30720000/16);
     rates.push_back(30720000/8);
     rates.push_back(30720000/4);
     rates.push_back(30720000/2);
     rates.push_back(30720000);
+    rates.push_back(1536000);
     return rates;
 }
 
