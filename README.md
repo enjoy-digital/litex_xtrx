@@ -12,7 +12,7 @@
 This project aims to recreate a FPGA design for the XTRX board with
 LiteX/LitePCIe:
 
-![](https://user-images.githubusercontent.com/1450143/147348139-503834af-76d5-4172-8ca0-e323b719fa17.png)
+![](https://github.com/enjoy-digital/litex_xtrx/assets/1450143/23a10c1f-0971-413a-a607-3439b13941eb.png)
 
 [> Getting started
 ------------------
