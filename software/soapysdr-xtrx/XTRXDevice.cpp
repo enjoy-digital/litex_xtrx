@@ -625,21 +625,13 @@ double SoapyLiteXXTRX::getSampleRate(const int direction, const size_t) const {
 
 std::vector<double> SoapyLiteXXTRX::listSampleRates(const int direction,
                                                const size_t) const {
-    const double baseRate = this->getTSPRate(direction);
+    // FIXME: / 1000 fix round maybe of something related to magnitude
+    const double baseRate = this->getTSPRate(direction)/1000;
     std::vector<double> rates;
     // from baseRate/32 to baseRate/2
     for (int i = 5; i >= 1; i--) {
-        rates.push_back(round(baseRate / (1 << i)));
+        rates.push_back(1000*round(baseRate / (1 << i)));
     }
-    for (size_t i = 0; i < rates.size();i++)
-        printf("rate %lf\n", rates[i]);
-    // GGM: hack
-    rates.push_back(30720000/16);
-    rates.push_back(30720000/8);
-    rates.push_back(30720000/4);
-    rates.push_back(30720000/2);
-    rates.push_back(30720000);
-    rates.push_back(1536000);
     return rates;
 }
 
