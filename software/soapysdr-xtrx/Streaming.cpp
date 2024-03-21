@@ -332,11 +332,14 @@ void SoapyLiteXXTRX::releaseWriteBuffer(SoapySDR::Stream */*stream*/, size_t han
 void deinterleave(const int8_t *src, void *dst, uint32_t len, std::string format, size_t offset)
 {
     if (format == SOAPY_SDR_CS16) {
-        int16_t *samples_cs16 = (int16_t *)dst + offset * BYTES_PER_SAMPLE;
-        for (uint32_t i = offset; i < len; i += 2)
+        int16_t *samples_cs16 = ((int16_t *)dst) + (offset * BYTES_PER_SAMPLE);
+        int16_t *src_int16 = (int16_t *)src;
+        for (uint32_t i = 0; i < len; i++)
         {
-            samples_cs16[i * BYTES_PER_SAMPLE] = (int16_t)(src[i * BYTES_PER_SAMPLE] << 8);
-            samples_cs16[i * BYTES_PER_SAMPLE + 1] = (int16_t)(src[i * BYTES_PER_SAMPLE + 1] << 8);
+            samples_cs16[0] = src[0];
+            samples_cs16[1] = src[1];
+            samples_cs16 += 2;
+            src_int16 += 4;
         }
     }
     else if (format == SOAPY_SDR_CF32) {
@@ -357,11 +360,14 @@ void deinterleave(const int8_t *src, void *dst, uint32_t len, std::string format
 void interleave(const void *src, int8_t *dst, uint32_t len, std::string format, size_t offset)
 {
     if (format == SOAPY_SDR_CS16) {
-        int16_t *samples_cs16 = (int16_t *)src + offset * BYTES_PER_SAMPLE;
-        for (uint32_t i = offset; i < len; i += 2)
+        int16_t *samples_cs16 = ((int16_t *)src) + offset * BYTES_PER_SAMPLE;
+        int16_t *dst_int16 = (int16_t *)dst;
+        for (uint32_t i = 0; i < len; i++)
         {
-            dst[i * BYTES_PER_SAMPLE] = (int8_t)(samples_cs16[i * BYTES_PER_SAMPLE] >> 8);
-            dst[i * BYTES_PER_SAMPLE + 1] = (int8_t)(samples_cs16[i * BYTES_PER_SAMPLE + 1] >> 8);
+            dst_int16[0] = samples_cs16[0];
+            dst_int16[1] = samples_cs16[1];
+            samples_cs16 += 2;
+            dst_int16 += 4;
         }
     }
     else if (format == SOAPY_SDR_CF32) {
