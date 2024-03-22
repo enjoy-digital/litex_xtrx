@@ -1191,8 +1191,16 @@ std::vector<SoapySDR::Kwargs> findXTRX(const SoapySDR::Kwargs &args) {
 
         // gather device info
         SoapySDR::Kwargs dev(args);
+        dev["device"] = "LiteXXTRX";
         dev["serial"] = getXTRXSerial(fd);
         dev["identification"] = getXTRXIdentification(fd);
+        dev["version"] = "1234";
+        size_t ofs = 0;
+        while (ofs < sizeof(dev["serial"]) and dev["serial"][ofs] == '0') ofs++;
+        char label_str[256];
+        sprintf(label_str, "%s %s %s %s", dev["device"].c_str(), args.at("path").c_str(),
+                dev["serial"].c_str()+ofs, dev["identification"].c_str());
+        dev["label"] = label_str;
         close(fd);
 
         discovered.push_back(dev);
@@ -1209,9 +1217,17 @@ std::vector<SoapySDR::Kwargs> findXTRX(const SoapySDR::Kwargs &args) {
             if (strstr(fpga_identification.c_str(), "LiteX SoC on Fairwaves XTRX") != NULL) {
                 // gather device info
                 SoapySDR::Kwargs dev(args);
+                dev["device"] = "LiteXXTRX";
                 dev["path"] = path;
                 dev["serial"] = getXTRXSerial(fd);
                 dev["identification"] = &fpga_identification[0];
+                dev["version"] = "1234";
+                size_t ofs = 0;
+                while (ofs < sizeof(dev["serial"]) and dev["serial"][ofs] == '0') ofs++;
+                char label_str[256];
+                sprintf(label_str, "%s %s %s %s", dev["device"].c_str(), path.c_str(),
+                    dev["serial"].c_str()+ofs, dev["identification"].c_str());
+                dev["label"] = label_str;
                 close(fd);
 
                 // filter by serial if specified
