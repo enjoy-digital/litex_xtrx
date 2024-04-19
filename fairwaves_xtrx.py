@@ -18,6 +18,7 @@ from migen.genlib.cdc    import MultiReg
 from litex.gen import *
 
 from litex_boards.platforms import fairwaves_xtrx
+from LimeSDR_XTRX_platform  import Platform as lime_xtrx
 
 from litex.soc.interconnect.csr import *
 from litex.soc.interconnect import stream
@@ -131,8 +132,14 @@ class BaseSoC(SoCCore):
         "analyzer"    : 30,
     }
 
-    def __init__(self, sys_clk_freq=int(125e6), variant="xc7a50t", with_cpu=True, cpu_firmware=None, with_jtagbone=True, with_analyzer=True):
-        platform = fairwaves_xtrx.Platform(variant=variant)
+    def __init__(self, sys_clk_freq=int(125e6), variant="xc7a50t", with_cpu=True, cpu_firmware=None,
+        with_jtagbone = True,
+        with_analyzer = True,
+        version       = "fairwaves"):
+        if version == "fairwaves":
+            platform = fairwaves_xtrx.Platform(variant=variant)
+        else:
+            platform = lime_xtrx(variant=variant)
 
         # Git SHA/Dirty. CHECKME: See if useful.
         git_sha = subprocess.check_output(['git', 'rev-parse', '--short', 'HEAD']).strip().decode('utf-8')
@@ -225,14 +232,15 @@ class BaseSoC(SoCCore):
         self.i2c1 = I2CMaster(pads=platform.request("i2c", 1))
 
         # XSYNC SPI Bus:
-        xsync_spi_pads      = platform.request("xsync_spi")
-        xsync_spi_pads.miso = Signal() # SPI is 3-wire, add fake MISO. Will only allow writes, not reads.
-        self.xsync_spi = SPIMaster(
-            pads         = xsync_spi_pads,
-            data_width   = 32,
-            sys_clk_freq = sys_clk_freq,
-            spi_clk_freq = 1e6
-        )
+        if version == "fairwaves":
+            xsync_spi_pads      = platform.request("xsync_spi")
+            xsync_spi_pads.miso = Signal() # SPI is 3-wire, add fake MISO. Will only allow writes, not reads.
+            self.xsync_spi = SPIMaster(
+                pads         = xsync_spi_pads,
+                data_width   = 32,
+                sys_clk_freq = sys_clk_freq,
+                spi_clk_freq = 1e6
+            )
 
         # PMIC-FPGA:
         # Buck0: 1.0V VCCINT + 1.0V MGTAVCC.
@@ -247,7 +255,8 @@ class BaseSoC(SoCCore):
         # Buck3: +1.5V  (used as input to 1.25V LDO for LMS analog 1.25V).
 
         # Aux -------------------------------------------------------------------------------------
-        self.aux = AUX(platform.request("aux"))
+        if version == "fairwaves":
+            self.aux = AUX(platform.request("aux"))
 
         # GPIO -------------------------------------------------------------------------------------
         #self.gpio = GPIO(platform.request("gpio"))
@@ -367,18 +376,22 @@ class BaseSoC(SoCCore):
 
 def main():
     parser = argparse.ArgumentParser(description="LiteX SoC on Fairwaves XTRX")
-    parser.add_argument("--variant", default="xc7a50t",  help="Select XTRX variant (xc7a50t aka pro or xc7a35t aka non-pro).")
-    parser.add_argument("--build",  action="store_true", help="Build bitstream.")
-    parser.add_argument("--load",   action="store_true", help="Load bitstream.")
-    parser.add_argument("--flash",  action="store_true", help="Flash bitstream.")
-    parser.add_argument("--driver", action="store_true", help="Generate PCIe driver from LitePCIe (override local version).")
+    parser.add_argument("--variant", default="xc7a50t",   help="Select XTRX variant (xc7a50t aka pro or xc7a35t aka non-pro).")
+    parser.add_argument("--version", default="fairwaves", help="Select XTRX version (fairwaves or lime).")
+    parser.add_argument("--build",   action="store_true", help="Build bitstream.")
+    parser.add_argument("--load",    action="store_true", help="Load bitstream.")
+    parser.add_argument("--flash",   action="store_true", help="Flash bitstream.")
+    parser.add_argument("--driver",  action="store_true", help="Generate PCIe driver from LitePCIe (override local version).")
     args = parser.parse_args()
 
     # Build SoC.
     for run in range(2):
         prepare = (run == 0)
         build   = ((run == 1) & args.build)
-        soc = BaseSoC(cpu_firmware=None if prepare else "firmware/firmware.bin", variant=args.variant)
+        soc = BaseSoC(cpu_firmware=None if prepare else "firmware/firmware.bin",
+            variant = args.variant,
+            version = args.version,
+        )
         builder = Builder(soc, csr_csv="csr.csv")
         builder.build(run=build)
         if prepare:
