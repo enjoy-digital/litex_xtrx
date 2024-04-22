@@ -14,11 +14,11 @@ from litex.build.openocd import OpenOCD
 
 _io = [
     # Clk/Rst.
-    ("FPGA_CLK", 0, Pins("N17"), IOStandard("LVCMOS33")),
+    ("clk26", 0, Pins("N17"), IOStandard("LVCMOS33")),
 
     # Leds.
     ("user_led", 0, Pins("N18"),  IOStandard("LVCMOS33")),
-    ("user_led2", 0, Pins("V19"),  IOStandard("LVCMOS33")),
+    ("user_led2", 0, Pins("G3 M2 G2"),  IOStandard("LVCMOS33")),
 
     # PCIe.
     ("pcie_x1", 0,
@@ -75,6 +75,14 @@ _io = [
         IOStandard("LVCMOS33"),
     ),
 
+    # XSYNC SPI bus.
+    ("xsync_spi", 1,
+        Subsignal("cs_n", Pins("H1")), # GPIO9
+        Subsignal("clk",  Pins("J1")), # GPIO10
+        Subsignal("mosi", Pins("N3")), # GPIO8
+        IOStandard("LVCMOS33"),
+    ),
+
     # Synchro.
     ("synchro", 0,
         Subsignal("pps_in", Pins("M3")), # GPIO0
@@ -102,6 +110,15 @@ _io = [
 
     # GPIO (X12, 8-pin FPC connector)
     ("gpio", 0, Pins("H1 J1 K2 L2"), IOStandard("LVCMOS33")),
+
+    # AUX.
+    ("aux", 0,
+        #Subsignal("iovcc_sel",  Pins("V19")), # not found
+        Subsignal("en_smsigio", Pins("D17")), # ok
+        #Subsignal("option",     Pins("V14")), # not found
+        Subsignal("gpio13",     Pins("T17")), # ok
+        IOStandard("LVCMOS33")
+    ),
 
     # RF-Switches / SKY13330, SKY13384.
     ("rf_switches", 0,
@@ -164,7 +181,7 @@ _io = [
 # Platform -----------------------------------------------------------------------------------------
 
 class Platform(Xilinx7SeriesPlatform):
-    default_clk_name   = "vctcxo_FPGA_CLK"
+    default_clk_name   = "clk26"
     default_clk_period = 1e9/26e6
     dev_short_string = ""
 
@@ -217,4 +234,4 @@ class Platform(Xilinx7SeriesPlatform):
 
     def do_finalize(self, fragment):
         Xilinx7SeriesPlatform.do_finalize(self, fragment)
-        self.add_period_constraint(self.lookup_request("FPGA_CLK", loose=True), 1e9/26e6)
+        self.add_period_constraint(self.lookup_request("clk26", loose=True), 1e9/26e6)
