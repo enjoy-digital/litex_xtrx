@@ -27,9 +27,13 @@ class AUX(LiteXModule):
         # # #
 
         # Drive Control Pins.
+
+        if hasattr(pads, "iovcc_sel"):
+            self.comb += pads.iovcc_sel.eq(self.control.fields.iovcc_sel) # FIXME: Check polarity.
+        if hasattr(pads, "option"):
+            self.comb += pads.option.eq(self.control.fields.option), # FIXME: Check polarity.
+
         self.comb += [
-            pads.iovcc_sel.eq(self.control.fields.iovcc_sel),   # FIXME: Check polarity.
             pads.en_smsigio.eq(self.control.fields.en_smsigio), # FIXME: Check polarity.
-            pads.option.eq(self.control.fields.option), # FIXME: Check polarity.
             pads.gpio13.eq(self.control.fields.gpio13), # FIXME: Check polarity.
         ]
