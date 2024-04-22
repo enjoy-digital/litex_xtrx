@@ -232,15 +232,14 @@ class BaseSoC(SoCCore):
         self.i2c1 = I2CMaster(pads=platform.request("i2c", 1))
 
         # XSYNC SPI Bus:
-        if version == "fairwaves":
-            xsync_spi_pads      = platform.request("xsync_spi")
-            xsync_spi_pads.miso = Signal() # SPI is 3-wire, add fake MISO. Will only allow writes, not reads.
-            self.xsync_spi = SPIMaster(
-                pads         = xsync_spi_pads,
-                data_width   = 32,
-                sys_clk_freq = sys_clk_freq,
-                spi_clk_freq = 1e6
-            )
+        xsync_spi_pads      = platform.request("xsync_spi")
+        xsync_spi_pads.miso = Signal() # SPI is 3-wire, add fake MISO. Will only allow writes, not reads.
+        self.xsync_spi = SPIMaster(
+            pads         = xsync_spi_pads,
+            data_width   = 32,
+            sys_clk_freq = sys_clk_freq,
+            spi_clk_freq = 1e6
+        )
 
         # PMIC-FPGA:
         # Buck0: 1.0V VCCINT + 1.0V MGTAVCC.
@@ -255,8 +254,7 @@ class BaseSoC(SoCCore):
         # Buck3: +1.5V  (used as input to 1.25V LDO for LMS analog 1.25V).
 
         # Aux -------------------------------------------------------------------------------------
-        if version == "fairwaves":
-            self.aux = AUX(platform.request("aux"))
+        self.aux = AUX(platform.request("aux"))
 
         # GPIO -------------------------------------------------------------------------------------
         #self.gpio = GPIO(platform.request("gpio"))
