@@ -18,6 +18,7 @@ _io = [
 
     # Leds.
     ("user_led", 0, Pins("N18"),  IOStandard("LVCMOS33")),
+    ("user_led", 1, Pins("V19"),  IOStandard("LVCMOS33")),
     ("user_led2", 0, Pins("G3 M2 G2"),  IOStandard("LVCMOS33")),
 
     # PCIe.
@@ -97,6 +98,7 @@ _io = [
         Subsignal("tx" , Pins("N2"),  Misc("PULLUP=True")),
         Subsignal("rx" , Pins("L1"),  Misc("PULLUP=True")),
         Subsignal("hw_s",Pins("L18"), IOStandard("LVCMOS33")),
+        Subsignal("fix", Pins("R18"), IOStandard("LVCMOS33")),
         IOStandard("LVCMOS33")
     ),
 
