@@ -15,7 +15,7 @@ from litex.soc.cores.uart import UARTPHY, UART
 # GPS ----------------------------------------------------------------------------------------------
 
 class GPS(LiteXModule):
-    def __init__(self, pads, sys_clk_freq, baudrate=9600):
+    def __init__(self, pads, sys_clk_freq, baudrate=9600, invert_rst=True):
         self.control = CSRStorage(fields=[
             CSRField("enable", size=1, offset=0, values=[
                 ("``0b0``", "Disable GPS."),
@@ -27,7 +27,10 @@ class GPS(LiteXModule):
         # # #
 
         # Drive Control Pin.
-        self.comb += pads.rst.eq(~self.control.fields.enable)
+        if invert_rst:
+            self.comb += pads.rst.eq(~self.control.fields.enable)
+        else:
+            self.comb += pads.rst.eq(self.control.fields.enable)
 
         # PPS Resynchronization.
         self.specials += MultiReg(pads.pps, self.pps)

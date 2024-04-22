@@ -260,7 +260,7 @@ class BaseSoC(SoCCore):
         #self.gpio = GPIO(platform.request("gpio"))
 
         # GPS --------------------------------------------------------------------------------------
-        self.gps = GPS(platform.request("gps"), sys_clk_freq, baudrate=9600)
+        self.gps = GPS(platform.request("gps"), sys_clk_freq, baudrate=9600, invert_rst=version=="fairwaves")
 
         # VCTCXO -----------------------------------------------------------------------------------
         vctcxo_pads = platform.request("vctcxo")
