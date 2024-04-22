@@ -393,7 +393,7 @@ def main():
         builder = Builder(soc, csr_csv="csr.csv")
         builder.build(run=build)
         if prepare:
-            os.system("cd firmware && make clean all")
+            os.system(f"cd firmware && make BUILD_DIR={builder.output_dir} clean all")
 
     # Generate LitePCIe Driver.
     generate_litepcie_software(soc, "software", use_litepcie_software=args.driver)
