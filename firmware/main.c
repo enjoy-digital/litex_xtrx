@@ -20,10 +20,12 @@
 #define XTRX_EXT_CLK    (1 << 0)
 #define XTRX_VCTCXO_CLK (0 << 0)
 
-#define TMP108_I2C_ADDR  0x4a
+#define TMP108_I2C_ADDR  0x4a /* Fairwaves */
+#define TMP1075_I2C_ADDR  0x4b /* Lime */
 #define LP8758_I2C_ADDR  0x60
 #define MCP4725_I2C_ADDR 0x62 /* Rev4 */
 #define DAC60501_I2C_ADDR 0x4b /* Rev5 */
+#define AD5693_I2C_ADDR 0x4c /* Rev5 */
 
 #define LMS7002M_RESET      (1 << 0)
 #define LMS7002M_POWER_DOWN (1 << 1)
@@ -154,6 +156,7 @@ static int board_get_revision(void)
 	/* Get board revision from SPI DACs:
 	   - XTRX Rev4 is equipped with a MCP4725.
 	   - XTRX Rev5 is equipped with a DAC60501.
+	   - Lime XTRX is equipped with a AD5693.
 	   The DAC60501 has the particularity of only accepting write commands,
 	   so we detect MCP4725 presence (and thus Rev4 revision) by doing a
 	   I2C read to the MCP4725 I2C address.
@@ -161,6 +164,7 @@ static int board_get_revision(void)
 
 	/* Check MCP4725 presence */
 	int has_mcp4725;
+	int has_ad5693;
 	i2c1_start();
 	has_mcp4725 = i2c1_transmit_byte(I2C1_ADDR_RD(MCP4725_I2C_ADDR));
 	i2c1_stop();
@@ -169,8 +173,16 @@ static int board_get_revision(void)
 		dac_addr = MCP4725_I2C_ADDR;
 		return 4;
 	} else {
-		dac_addr = DAC60501_I2C_ADDR;
-		return 5;
+		i2c1_start();
+		has_ad5693 = i2c1_transmit_byte(I2C1_ADDR_RD(AD5693_I2C_ADDR));
+		i2c1_stop();
+		if (has_ad5693) {
+			dac_addr = AD5693_I2C_ADDR;
+			return 12;
+		} else {
+			dac_addr = DAC60501_I2C_ADDR;
+			return 5;
+		}
 	}
 }
 
@@ -225,7 +237,11 @@ static void temp_test(void)
 {
 	unsigned int temp;
 	unsigned char dat[2];
-	i2c1_read(TMP108_I2C_ADDR, 0x00, dat, 2, true);
+	if (board_revision == 12) {
+		i2c1_read(TMP1075_I2C_ADDR, 0x00, dat, 2, true);
+	} else {
+		i2c1_read(TMP108_I2C_ADDR, 0x00, dat, 2, true);
+	}
 	temp = (dat[0] << 4) | (dat[1] >> 4);
 	temp = (62500*temp)/1000000; /* 0.0625°C/count */
 	printf("Temperature: %d°C\n", temp);
@@ -242,6 +258,9 @@ static void dac_init(void) {
 	/* Rev4 is equipped with a MCP4725 */
 	if (board_revision == 4) {
 		printf("DAC is MCP4725\n");
+	/* Lime is equipped with a AD5693 */
+	} else if (board_revision == 12) {
+		printf("DAC is AD5693.\n");
 	/* Rev5 is equipped with a DAC60501 */
 	} else {
 		printf("DAC is DAC60501.\n");
@@ -269,6 +288,16 @@ static void vctcxo_dac_set(int value) {
 		cmd    = (0b0000 << 4) | (value >> 8);
 		dat[0] = (value & 0xff);
 		i2c1_write(MCP4725_I2C_ADDR, cmd, dat, 1);
+	/* Lime is equipped with a AD5693 */
+	} else if (board_revision == 12) {
+		value = value & 0xffff; /* 16-bit full range clamp */
+		cmd = (0x3 << 4);
+		dat[0] = (value >> 8) & 0x00ff;
+		dat[1] = value & 0x00ff;
+		ret = i2c1_write(AD5693_I2C_ADDR, cmd, dat, 2);
+		if (!ret) {
+			printf("DAC write failed\n");
+		}
 	/* Rev5 is equipped with a DAC60501 */
 	} else {
 		// Bottom four bits are ignored on DAC60501
