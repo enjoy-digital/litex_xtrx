@@ -1,6 +1,7 @@
 cmake_minimum_required(VERSION 3.17)
 project(SoapySDRLiteXXTRX CXX C)
 
+set(CMAKE_CXX_STANDARD 17)
 
 ########################################################################
 ## LitePCIe discovery
@@ -47,6 +48,24 @@ find_library(LMS7002M_LIBRARY LMS7002M
 
 include_directories(${LMS7002M_INCLUDE_DIR})
 
+########################################################################
+## LMS7002MNG discovery
+########################################################################
+
+message(STATUS "Looking for LMS7002MNG in ${LMS7002MNG_ROOT}...")
+
+find_path(LMS7002MNG_INCLUDE_DIR lms7002mNG/LMS7002M.h
+          HINTS ${LMS7002MNG_ROOT}
+          PATH_SUFFIXES include
+          REQUIRED)
+
+find_library(LMS7002MNG_LIBRARY lms7002mNG
+             HINTS ${LMS7002MNG_ROOT}
+             PATH_SUFFIXES lib
+             REQUIRED)
+
+include_directories(${LMS7002MNG_INCLUDE_DIR})
+
 
 ########################################################################
 ## Test executable
@@ -54,7 +73,7 @@ include_directories(${LMS7002M_INCLUDE_DIR})
 
 add_executable(main main.c)
 
-target_link_libraries(main ${LITEPCIE_LIBRARY} ${LMS7002M_LIBRARY} m)
+target_link_libraries(main ${LITEPCIE_LIBRARY} ${LMS7002M_LIBRARY} ${LMS7002MNG_LIBRARY} m)
 
 ########################################################################
 ## SoapySDR library
@@ -65,6 +84,6 @@ find_package(SoapySDR "0.2.1" REQUIRED)
 SOAPY_SDR_MODULE_UTIL(
     TARGET SoapyLiteXXTRX
     SOURCES XTRXDevice.cpp Streaming.cpp
-    LIBRARIES ${LITEPCIE_LIBRARY} ${LMS7002M_LIBRARY} m
+	LIBRARIES ${LITEPCIE_LIBRARY} ${LMS7002M_LIBRARY} ${LMS7002MNG_LIBRARY} m
 )
 
