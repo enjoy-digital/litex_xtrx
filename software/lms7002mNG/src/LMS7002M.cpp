@@ -19,23 +19,27 @@
 #include <unordered_set>
 #include <thread>
 
+#include <cstring>
+
 #ifdef __GNUC__
     #pragma GCC diagnostic push
     #pragma GCC diagnostic ignored "-Wold-style-cast"
 #endif
-#include "cpp-feather-ini-parser/INI.h"
+//#include "cpp-feather-ini-parser/INI.h"
 #ifdef __GNUC__
     #pragma GCC diagnostic pop
 #endif
 
-#include "lms_gfir.h"
+//#include "lms_gfir.h"
 #include "limesuiteng/types.h"
-#include "comms/IComms.h"
+//#include "comms/IComms.h"
 #include "LMS7002M_RegistersMap.h"
 #include "limesuiteng/Logger.h"
 #include "mcu_programs.h"
 #include "MCU_BD.h"
 #include "utilities/toString.h"
+
+#include "IComms.h"
 
 using namespace lime;
 using namespace std::literals::string_literals;
@@ -419,6 +423,7 @@ OpStatus LMS7002M::SoftReset()
 
 OpStatus LMS7002M::LoadConfigLegacyFile(const std::string& filename)
 {
+#if 0
     std::ifstream f(filename);
     if (f.good() == false) //file not found
     {
@@ -595,11 +600,13 @@ OpStatus LMS7002M::LoadConfigLegacyFile(const std::string& filename)
         }
         return OpStatus::Success;
     }
+#endif
     return ReportError(OpStatus::InvalidValue, "LoadConfigLegacyFile(%s) - invalid format", filename.c_str());
 }
 
 OpStatus LMS7002M::LoadConfig(const std::string& filename, bool tuneDynamicValues)
 {
+#if 0
     std::ifstream f(filename);
     if (f.good() == false) //file not found
     {
@@ -721,6 +728,7 @@ OpStatus LMS7002M::LoadConfig(const std::string& filename, bool tuneDynamicValue
         }
     }
     this->SetActiveChannel(Channel::ChA);
+#endif
     return OpStatus::Success;
 }
 
@@ -3111,6 +3119,7 @@ float_type LMS7002M::GetSampleRate(TRXDir dir)
 
 OpStatus LMS7002M::SetGFIRFilter(TRXDir dir, Channel ch, bool enabled, double bandwidth)
 {
+#if 0
     ChannelScope scope(this, ch);
     const bool bypassFIR = !enabled;
     if (dir == TRXDir::Tx)
@@ -3218,6 +3227,8 @@ OpStatus LMS7002M::SetGFIRFilter(TRXDir dir, Channel ch, bool enabled, double ba
     lime::info(ss.str());
 
     return ResetLogicRegisters();
+#endif
+    return OpStatus::Error;
 }
 
 void LMS7002M::SetOnCGENChangeCallback(CGENChangeCallbackType callback, void* userData)
