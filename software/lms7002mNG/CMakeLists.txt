@@ -42,8 +42,7 @@ set(LMS7002M_SOURCES
 set(LMS7002M_INCLUDES
     ${CMAKE_CURRENT_SOURCE_DIR}
     ${CMAKE_CURRENT_SOURCE_DIR}/include
-    ${CMAKE_CURRENT_SOURCE_DIR}/src/lms7002m
-    ${CMAKE_CURRENT_SOURCE_DIR}/src/lms7002m/utilities
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/utilities
 )
 
 ########################################################################
@@ -131,6 +130,8 @@ include_directories(include)
 # install headers
 ########################################################################
 #install(DIRECTORY include/LMS7002M DESTINATION include)
+
+add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/src/utilities)
 
 option(ENABLE_LIBRARY "Enable build library" ON)
 #add_feature_info(LIBRARY ENABLE_LIBRARY "The limesuiteng library")
