@@ -1,7 +1,7 @@
 include(FeatureSummary)
 include(CMakeDependentOption)
 
-cmake_dependent_option(ENABLE_UTILITIES "Enable utility programs" ON "ENABLE_LIBRARY" OFF)
+cmake_dependent_option(ENABLE_UTILITIES "Enable utility programs" ON "ENABLE_LIBRARY" ON)
 
 if(NOT ENABLE_UTILITIES)
     return()

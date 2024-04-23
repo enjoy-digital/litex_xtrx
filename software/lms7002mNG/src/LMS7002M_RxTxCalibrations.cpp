@@ -5,7 +5,7 @@
 #include <chrono>
 #include <thread>
 #include "lms7002mNG/Logger.h"
-#include "LMSBoards.h"
+//#include "LMSBoards.h"
 
 #ifndef NDEBUG
     #define LMS_VERBOSE_OUTPUT

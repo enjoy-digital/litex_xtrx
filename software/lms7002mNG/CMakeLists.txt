@@ -32,17 +32,24 @@ set(LMS7002M_SOURCES
     ${CMAKE_CURRENT_SOURCE_DIR}/src/LMS7002M_parameters.cpp
 	${CMAKE_CURRENT_SOURCE_DIR}/src/LMS7002M.cpp
 	#${CMAKE_CURRENT_SOURCE_DIR}/src/LMS7002M_validation.cpp
-	#lms7002m/LMS7002M_RxTxCalibrations.cpp
+	${CMAKE_CURRENT_SOURCE_DIR}/src/LMS7002M_RxTxCalibrations.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/src/LMS7002M_BaseCalibrations.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/src/mcu_dc_iq_calibration.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/src/LMS7002M_filtersCalibration.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/src/LMS7002M_gainCalibrations.cpp
+	${CMAKE_CURRENT_SOURCE_DIR}/src/MCU_BD.cpp
+	${CMAKE_CURRENT_SOURCE_DIR}/src/MCU_File.cpp
+	${CMAKE_CURRENT_SOURCE_DIR}/src/logger/Logger.cpp
+	${CMAKE_CURRENT_SOURCE_DIR}/src/logger/LoggerCString.cpp
+	${CMAKE_CURRENT_SOURCE_DIR}/src/utilities/toString.cpp
 )
 
 set(LMS7002M_INCLUDES
     ${CMAKE_CURRENT_SOURCE_DIR}
     ${CMAKE_CURRENT_SOURCE_DIR}/include
+    ${CMAKE_CURRENT_SOURCE_DIR}/src
     ${CMAKE_CURRENT_SOURCE_DIR}/src/utilities
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/logger
 )
 
 ########################################################################
@@ -146,7 +153,7 @@ if(ENABLE_LIBRARY)
 	#set_target_properties(${MAIN_LIBRARY_NAME} PROPERTIES SOVERSION ${LIME_SUITE_SOVER})
 	#set_target_properties(${MAIN_LIBRARY_NAME} PROPERTIES VERSION ${LIME_SUITE_LIBVER})
 	set_target_properties(${MAIN_LIBRARY_NAME} PROPERTIES DEFINE_SYMBOL "LIME_DLL_EXPORTS")
-	#target_include_directories(${MAIN_LIBRARY_NAME} PRIVATE ${LIME_SUITE_INCLUDES})
+	target_include_directories(${MAIN_LIBRARY_NAME} PRIVATE ${LMS7002M_INCLUDES})
     target_include_directories(
         ${MAIN_LIBRARY_NAME}
         INTERFACE $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
