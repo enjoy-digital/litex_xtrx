@@ -7,21 +7,21 @@
 cmake_minimum_required(VERSION 3.15)
 project(LMS7002MDriver C CXX)
 
-set(MAIN_LIBRARY_NAME limesuiteng)
+set(MAIN_LIBRARY_NAME lms7002mNG)
 
 ########################################################################
 ## public headers
 ########################################################################
 file(
-    GLOB LIMESUITENG_PUBLIC_HEADERS
+	GLOB LMS7002MNG_PUBLIC_HEADERS
     RELATIVE "${CMAKE_CURRENT_SOURCE_DIR}"
-    "${CMAKE_CURRENT_SOURCE_DIR}/include/limesuiteng/*.h" "${CMAKE_CURRENT_SOURCE_DIR}/include/limesuiteng/*.hpp")
+    "${CMAKE_CURRENT_SOURCE_DIR}/include/lms7002mNG/*.h" "${CMAKE_CURRENT_SOURCE_DIR}/include/lms7002mNG/*.hpp")
 include(FeatureSummary)
 include(CMakeDependentOption)
 cmake_dependent_option(ENABLE_HEADERS "Enable install headers" ON "TRUE" OFF)
-add_feature_info(HEADERS ENABLE_HEADERS "The limesuiteng headers")
+add_feature_info(HEADERS ENABLE_HEADERS "The lms7002mNG headers")
 if(ENABLE_HEADERS)
-    install(FILES ${LIMESUITENG_PUBLIC_HEADERS} DESTINATION include/limesuiteng)
+	install(FILES ${LMS7002MNG_PUBLIC_HEADERS} DESTINATION include/lms7002mNG)
 endif()
 
 #file(GLOB LMS7002M_SOURCES "${CMAKE_CURRENT_SOURCE_DIR}/src/LMS7002M_*.cpp")
@@ -134,7 +134,7 @@ include_directories(include)
 add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/src/utilities)
 
 option(ENABLE_LIBRARY "Enable build library" ON)
-#add_feature_info(LIBRARY ENABLE_LIBRARY "The limesuiteng library")
+#add_feature_info(LIBRARY ENABLE_LIBRARY "The lms7002mNG library")
 if(ENABLE_LIBRARY)
     add_library(${MAIN_LIBRARY_NAME} ${LMS7002M_SOURCES})
     target_link_libraries(
@@ -171,7 +171,7 @@ if(ENABLE_LIBRARY)
 
     install(
         TARGETS ${MAIN_LIBRARY_NAME}
-        EXPORT limesuiteng
+        EXPORT lms7002mNG
         LIBRARY DESTINATION lib${LIB_SUFFIX} # .so file
         ARCHIVE DESTINATION lib${LIB_SUFFIX} # .lib file
         RUNTIME DESTINATION bin # .dll file

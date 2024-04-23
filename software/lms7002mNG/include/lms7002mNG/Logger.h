@@ -1,5 +1,5 @@
 /**
-@file limesuiteng/Logger.h
+@file lms7002mNG/Logger.h
 @author Lime Microsystems
 @brief API for logging library status messages.
 */
@@ -7,8 +7,8 @@
 #ifndef LIMESUITE_LOGGER_H
 #define LIMESUITE_LOGGER_H
 
-#include "limesuiteng/config.h"
-#include "limesuiteng/OpStatus.h"
+#include "lms7002mNG/config.h"
+#include "lms7002mNG/OpStatus.h"
 #include <string>
 #include <cstdarg>
 #include <cerrno>

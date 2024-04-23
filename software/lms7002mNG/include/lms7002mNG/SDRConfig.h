@@ -1,8 +1,8 @@
 #ifndef LIMESUITENG_SDRCONFIG_H
 #define LIMESUITENG_SDRCONFIG_H
 
-#include "limesuiteng/types.h"
-#include "limesuiteng/complex.h"
+#include "lms7002mNG/types.h"
+#include "lms7002mNG/complex.h"
 
 #include <unordered_map>
 

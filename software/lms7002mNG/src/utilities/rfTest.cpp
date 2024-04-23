@@ -1,9 +1,9 @@
-#include "limesuiteng/SDRDevice.h"
-#include "limesuiteng/StreamConfig.h"
-#include "limesuiteng/DeviceRegistry.h"
-#include "limesuiteng/DeviceHandle.h"
-#include "limesuiteng/complex.h"
-#include "limesuiteng/Logger.h"
+#include "lms7002mNG/SDRDevice.h"
+#include "lms7002mNG/StreamConfig.h"
+#include "lms7002mNG/DeviceRegistry.h"
+#include "lms7002mNG/DeviceHandle.h"
+#include "lms7002mNG/complex.h"
+#include "lms7002mNG/Logger.h"
 #include <iostream>
 #include <chrono>
 #include <cmath>

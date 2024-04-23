@@ -7,7 +7,7 @@
 #ifndef LIMESUITENG_VERSION_INFO_H
 #define LIMESUITENG_VERSION_INFO_H
 
-#include "limesuiteng/config.h"
+#include "lms7002mNG/config.h"
 #include <string>
 
 /*!

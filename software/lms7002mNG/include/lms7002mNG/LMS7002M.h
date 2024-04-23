@@ -7,10 +7,10 @@
 #ifndef LMS7API_H
 #define LMS7API_H
 
-#include "limesuiteng/types.h"
-#include "limesuiteng/config.h"
-#include "limesuiteng/LMS7002M_parameters.h"
-#include "limesuiteng/OpStatus.h"
+#include "lms7002mNG/types.h"
+#include "lms7002mNG/config.h"
+#include "lms7002mNG/LMS7002M_parameters.h"
+#include "lms7002mNG/OpStatus.h"
 
 #include <array>
 #include <cstdarg>

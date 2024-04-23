@@ -1,8 +1,8 @@
-#include "limesuiteng/LMS7002M.h"
+#include "lms7002mNG/LMS7002M.h"
 #include "LMS7002M_RegistersMap.h"
 #include <thread>
 #include <chrono>
-#include "limesuiteng/Logger.h"
+#include "lms7002mNG/Logger.h"
 
 using namespace std;
 

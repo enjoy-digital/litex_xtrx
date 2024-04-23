@@ -6,7 +6,7 @@
 #include <vector>
 #include <unordered_map>
 
-#include "limesuiteng/types.h"
+#include "lms7002mNG/types.h"
 
 namespace lime {
 

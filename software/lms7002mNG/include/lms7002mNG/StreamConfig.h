@@ -1,8 +1,8 @@
 #ifndef LIMESUITENG_SDRSTREAMCONFIG_H
 #define LIMESUITENG_SDRSTREAMCONFIG_H
 
-#include "limesuiteng/config.h"
-#include "limesuiteng/types.h"
+#include "lms7002mNG/config.h"
+#include "lms7002mNG/types.h"
 
 namespace lime {
 

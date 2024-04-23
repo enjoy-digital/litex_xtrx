@@ -4,7 +4,7 @@
 @brief API for querying version and build information.
 */
 
-#include "limesuiteng/VersionInfo.h"
+#include "lms7002mNG/VersionInfo.h"
 #include <sstream>
 
 #define QUOTE_(x) #x

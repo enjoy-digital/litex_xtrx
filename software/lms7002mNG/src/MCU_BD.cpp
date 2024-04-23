@@ -13,8 +13,8 @@ using namespace std;
 #include <assert.h>
 #include <thread>
 #include <list>
-#include "limesuiteng/LMS7002M.h"
-#include "limesuiteng/Logger.h"
+#include "lms7002mNG/LMS7002M.h"
+#include "lms7002mNG/Logger.h"
 #include "comms/IComms.h"
 #include <functional>
 #include <string_view>

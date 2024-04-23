@@ -1,7 +1,7 @@
-#include "limesuiteng/SDRDevice.h"
-#include "limesuiteng/StreamConfig.h"
+#include "lms7002mNG/SDRDevice.h"
+#include "lms7002mNG/StreamConfig.h"
 
-#include "limesuiteng/Logger.h"
+#include "lms7002mNG/Logger.h"
 
 using namespace lime;
 using namespace std::literals::string_literals;

@@ -1,10 +1,10 @@
-#include "limesuiteng/LMS7002M.h"
+#include "lms7002mNG/LMS7002M.h"
 #include <assert.h>
 #include "MCU_BD.h"
 #include "mcu_programs.h"
 #include <chrono>
 #include <thread>
-#include "limesuiteng/Logger.h"
+#include "lms7002mNG/Logger.h"
 #include "LMSBoards.h"
 
 #ifndef NDEBUG

@@ -1,7 +1,7 @@
 #pragma once
 
-#include "limesuiteng/types.h"
-#include "limesuiteng/OpStatus.h"
+#include "lms7002mNG/types.h"
+#include "lms7002mNG/OpStatus.h"
 
 #include <string>
 

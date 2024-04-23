@@ -5,7 +5,7 @@
 #include <map>
 #include <memory>
 
-#include "limesuiteng/RFSOCDescriptor.h"
+#include "lms7002mNG/RFSOCDescriptor.h"
 
 namespace lime {
 

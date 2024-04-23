@@ -4,7 +4,7 @@
 #include <string>
 #include <vector>
 
-#include "limesuiteng/config.h"
+#include "lms7002mNG/config.h"
 
 namespace lime {
 

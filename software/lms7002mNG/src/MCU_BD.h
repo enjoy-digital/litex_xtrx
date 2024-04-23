@@ -14,8 +14,8 @@
 #include <memory>
 
 #include "mcu_programs.h"
-#include "limesuiteng/config.h"
-#include "limesuiteng/OpStatus.h"
+#include "lms7002mNG/config.h"
+#include "lms7002mNG/OpStatus.h"
 
 using namespace std::literals::string_literals;
 

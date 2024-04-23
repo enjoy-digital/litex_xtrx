@@ -5,7 +5,7 @@
 */
 
 #define _USE_MATH_DEFINES
-#include "limesuiteng/LMS7002M.h"
+#include "lms7002mNG/LMS7002M.h"
 
 #include <algorithm>
 #include <cassert>
@@ -31,10 +31,10 @@
 #endif
 
 //#include "lms_gfir.h"
-#include "limesuiteng/types.h"
+#include "lms7002mNG/types.h"
 //#include "comms/IComms.h"
 #include "LMS7002M_RegistersMap.h"
-#include "limesuiteng/Logger.h"
+#include "lms7002mNG/Logger.h"
 #include "mcu_programs.h"
 #include "MCU_BD.h"
 #include "utilities/toString.h"

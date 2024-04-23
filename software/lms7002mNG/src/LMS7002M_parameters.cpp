@@ -4,7 +4,7 @@
 @brief 	Definition of LMS7002M transceiver control parameters registers
 */
 
-#include "limesuiteng/LMS7002M_parameters.h"
+#include "lms7002mNG/LMS7002M_parameters.h"
 
 #include <functional>
 #include <vector>

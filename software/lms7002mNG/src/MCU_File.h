@@ -1,7 +1,7 @@
 #ifndef MCU_FILE_H
 #define MCU_FILE_H
 
-#include "limesuiteng/config.h"
+#include "lms7002mNG/config.h"
 
 #include <stdio.h>
 #include <string.h>

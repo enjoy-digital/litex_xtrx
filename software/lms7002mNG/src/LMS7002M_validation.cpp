@@ -3,7 +3,7 @@
 
 #include <string>
 #include <cstdarg>
-#include "limesuiteng/SDRDevice.h"
+#include "lms7002mNG/SDRDevice.h"
 #include "CommonFunctions.h"
 
 namespace lime {

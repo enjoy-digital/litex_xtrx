@@ -7,10 +7,10 @@
 #include <string>
 #include <vector>
 
-#include "limesuiteng/config.h"
-#include "limesuiteng/complex.h"
-#include "limesuiteng/OpStatus.h"
-#include "limesuiteng/SDRConfig.h"
+#include "lms7002mNG/config.h"
+#include "lms7002mNG/complex.h"
+#include "lms7002mNG/OpStatus.h"
+#include "lms7002mNG/SDRConfig.h"
 
 namespace lime {
 

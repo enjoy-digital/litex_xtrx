@@ -1,7 +1,7 @@
 #ifndef LIMESUITENG_TYPES_H
 #define LIMESUITENG_TYPES_H
 
-#include "limesuiteng/config.h"
+#include "lms7002mNG/config.h"
 #include <cstdint>
 #include <string>
 

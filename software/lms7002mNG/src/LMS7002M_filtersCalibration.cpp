@@ -4,8 +4,8 @@
 @brief	Implementation of LMS7002M transceiver filters calibration algorithms
 */
 
-#include "limesuiteng/LMS7002M.h"
-#include "limesuiteng/Logger.h"
+#include "lms7002mNG/LMS7002M.h"
+#include "lms7002mNG/Logger.h"
 #include "LMS7002M_RegistersMap.h"
 #include <cmath>
 #include <iostream>

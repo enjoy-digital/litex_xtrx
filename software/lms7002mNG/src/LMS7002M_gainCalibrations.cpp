@@ -1,5 +1,5 @@
-#include "limesuiteng/LMS7002M.h"
-#include "limesuiteng/Logger.h"
+#include "lms7002mNG/LMS7002M.h"
+#include "lms7002mNG/Logger.h"
 
 using namespace lime;
 using namespace std::literals::string_literals;
