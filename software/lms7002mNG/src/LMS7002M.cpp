@@ -39,7 +39,7 @@
 #include "MCU_BD.h"
 #include "utilities/toString.h"
 
-#include "IComms.h"
+#include "lms7002mNG/IComms.h"
 
 using namespace lime;
 using namespace std::literals::string_literals;
