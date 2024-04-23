@@ -30,7 +30,7 @@ set(LMS7002M_SOURCES
     #src/lms7002m/MCU_File.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/src/LMS7002M_RegistersMap.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/src/LMS7002M_parameters.cpp
-	#${CMAKE_CURRENT_SOURCE_DIR}/src/LMS7002M.cpp
+	${CMAKE_CURRENT_SOURCE_DIR}/src/LMS7002M.cpp
 	#${CMAKE_CURRENT_SOURCE_DIR}/src/LMS7002M_validation.cpp
 	#lms7002m/LMS7002M_RxTxCalibrations.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/src/LMS7002M_BaseCalibrations.cpp
@@ -39,10 +39,11 @@ set(LMS7002M_SOURCES
     ${CMAKE_CURRENT_SOURCE_DIR}/src/LMS7002M_gainCalibrations.cpp
 )
 
-set(LIME_SUITE_INCLUDES
+set(LMS7002M_INCLUDES
     ${CMAKE_CURRENT_SOURCE_DIR}
     ${CMAKE_CURRENT_SOURCE_DIR}/include
-    ${CMAKE_CURRENT_SOURCE_DIR}/lms7002m
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/lms7002m
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/lms7002m/utilities
 )
 
 ########################################################################
