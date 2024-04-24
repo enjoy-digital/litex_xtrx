@@ -716,25 +716,47 @@ void SoapyLiteXXTRX::setBandwidth(const int direction, const size_t channel,
     SoapySDR::logf(SOAPY_SDR_DEBUG, "SoapyLiteXXTRX::setBandwidth(%s, ch%d, %f MHz)",
                    dir2Str(direction), channel, bw / 1e6);
 
+#ifdef USE_NG
+	lime::OpStatus ret = lime::OpStatus::Success;
+#else
     int ret = 0;
+#endif
     double &actualBw = _cachedFilterBws[direction][channel];
     if (direction == SOAPY_SDR_RX) {
+#ifdef USE_NG
+        ret = _lms2->CalibrateRx(bw, false);
+        if (ret == lime::OpStatus::Success)
+#else
         //ret = LMS7002M_rbb_set_filter_bw(_lms, ch2LMS(channel), bw, &actualBw);
         ret = LMS7002M_mcu_calibration_rx(_lms, _refClockRate, bw);
         if (ret == 0)
+#endif
             actualBw = bw;
     }
     if (direction == SOAPY_SDR_TX) {
+#ifdef USE_NG
+        ret = _lms2->CalibrateTx(bw, false);
+        if (ret == lime::OpStatus::Success)
+#else
         //ret = LMS7002M_tbb_set_filter_bw(_lms, ch2LMS(channel), bw, &actualBw);
         ret = LMS7002M_mcu_calibration_tx(_lms, _refClockRate, bw);
         if (ret == 0)
+#endif
             actualBw = bw;
     }
 
+#ifdef USE_NG
+	if (ret != lime::OpStatus::Success)
+#else
     if (ret != 0)
+#endif
         throw std::runtime_error("SoapyLiteXXTRX::setBandwidth(" +
                                  std::to_string(bw / 1e6) + " MHz) failed - " +
+#ifdef USE_NG
+								 "");
+#else
                                  std::to_string(ret));
+#endif
 }
 
 double SoapyLiteXXTRX::getBandwidth(const int direction,
@@ -784,9 +806,17 @@ double SoapyLiteXXTRX::getTSPRate(const int direction) const {
 void SoapyLiteXXTRX::setMasterClockRate(const double rate) {
     std::lock_guard<std::mutex> lock(_mutex);
 
+#ifdef USE_NG
+	lime::LMS7002M::CGEN_details out;
+    lime::OpStatus ret = _lms2->SetFrequencyCGEN(rate, true, &out);
+    if (ret == lime::OpStatus::Success) {
+        _masterClockRate = out.frequency;
+    } else {
+#else
     int ret =
         LMS7002M_set_data_clock(_lms, _refClockRate, rate, &_masterClockRate);
     if (ret != 0) {
+#endif
         SoapySDR::logf(SOAPY_SDR_ERROR, "LMS7002M_set_data_clock(%f MHz) -> %d",
                        rate / 1e6, ret);
         throw std::runtime_error("XTRX fail LMS7002M_set_data_clock()");
