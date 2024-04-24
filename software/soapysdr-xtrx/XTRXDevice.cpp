@@ -290,31 +290,31 @@ SoapyLiteXXTRX::configure_lml_port(uint8_t portNo, direction, int mckDiv)
     //set TRXIQ on both ports
     if (portNo == LMS_PORT1)
     {
-        self->regs->reg_0x0023_lml1_mode = REG_0X0023_LML1_MODE_TRXIQ;
-        self->regs->reg_0x0023_lml1_rxntxiq = (direction==LMS_TX)?
-            REG_0X0023_LML1_RXNTXIQ_RXIQ:REG_0X0023_LML1_RXNTXIQ_TXIQ; //WARNING: TX/RX perspective swap
+		_lms2->Modify_SPI_Reg_bits(LMS7param(LML1_MODE), 1);
+		_lms2->Modify_SPI_Reg_bits(LMS7param(LML1_RXNTXIQ), direction==LMS_TX ? 1 : 0); // 1 RXIQ, 0: TXIQ
     }
     if (portNo == LMS_PORT2)
     {
-        self->regs->reg_0x0023_lml2_mode = REG_0X0023_LML2_MODE_TRXIQ;
-        self->regs->reg_0x0023_lml2_rxntxiq = (direction==LMS_TX)?
-            REG_0X0023_LML2_RXNTXIQ_RXIQ:REG_0X0023_LML2_RXNTXIQ_TXIQ; //WARNING: TX/RX perspective swap
+		_lms2->Modify_SPI_Reg_bits(LMS7param(LML2_MODE), 1);
+		_lms2->Modify_SPI_Reg_bits(LMS7param(LML2_RXNTXIQ), direction==LMS_TX ? 1 : 0); // 1 RXIQ, 0: TXIQ
     }
 
     //automatic directions based on mode above
-    self->regs->reg_0x0023_enabledirctr1 = 0;
-    self->regs->reg_0x0023_enabledirctr2 = 0;
+	_lms2->Modify_SPI_Reg_bits(LMS7param(ENABLEDIRCTR1), 0);
+	_lms2->Modify_SPI_Reg_bits(LMS7param(ENABLEDIRCTR2), 0);
 
     //set the FIFO rd and wr clock muxes based on direction
     if (direction == LMS_TX)
     {
-        self->regs->reg_0x002a_txrdclk_mux = REG_0X002A_TXRDCLK_MUX_TXTSPCLK;
-        self->regs->reg_0x002a_txwrclk_mux = (portNo==LMS_PORT1)?REG_0X002A_TXWRCLK_MUX_FCLK1:REG_0X002A_TXWRCLK_MUX_FCLK2;
+		_lms2->Modify_SPI_Reg_bits(LMS7param(LMS7_TXRDCLK_MUX), 2); // Clock source is TxTSPCLK
+		_lms2->Modify_SPI_Reg_bits(LMS7param(LMS7_TXWDCLK_MUX),
+			(portNo==LMS_PORT1) ? 0x00 : 0x01); // 0: FCLK1, 1: FCLK2, 2/3: TxTSPCLK
     }
     if (direction == LMS_RX)
     {
-        self->regs->reg_0x002a_rxrdclk_mux = (portNo==LMS_PORT1)?REG_0X002A_RXRDCLK_MUX_MCLK1:REG_0X002A_RXRDCLK_MUX_MCLK2;
-        self->regs->reg_0x002a_rxwrclk_mux = REG_0X002A_RXWRCLK_MUX_RXTSPCLK;
+		_lms2->Modify_SPI_Reg_bits(LMS7param(LMS7_RXRDCLK_MUX),
+			(portNo==LMS_PORT1) ? 0x00 : 0x01); // 0: MCLK1, 1: MCLK2, 2: FCLK1, 3: FCLK2
+		_lms2->Modify_SPI_Reg_bits(LMS7param(LMS7_RXWDCLK_MUX), 2); // Clock source is TxTSPCLK
     }
 
     //data stream muxes
@@ -357,12 +357,6 @@ SoapyLiteXXTRX::configure_lml_port(uint8_t portNo, direction, int mckDiv)
     //       to avoid terrible spiking behavior when running a
     //       TBB baseband loopback.
     self->regs->reg_0x00ad_value = 0x03f3;
-
-    LMS7002M_regs_spi_write(self, 0x0023);
-    LMS7002M_regs_spi_write(self, 0x002A);
-    LMS7002M_regs_spi_write(self, 0x002B);
-    LMS7002M_regs_spi_write(self, 0x002C);
-    LMS7002M_regs_spi_write(self, 0x00AD);
 #else
     LMS7002M_configure_lml_port(_lms, LMS_PORT2, LMS_TX, 1);
 #endif
