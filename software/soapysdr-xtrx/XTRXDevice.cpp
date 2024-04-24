@@ -509,12 +509,44 @@ std::vector<std::string> SoapyLiteXXTRX::listGains(const int direction,
 void SoapyLiteXXTRX::setGain(const int direction, const size_t channel,
                         const std::string &name, const double value) {
     std::lock_guard<std::mutex> lock(_mutex);
+#ifdef USE_NG
+    lime::LMS7002M::Channel chan = channel > 0 ? lime::LMS7002M::Channel::ChB : lime::LMS7002M::Channel::ChA;
+    lime::OpStatus ret = lime::OpStatus::Success;
+#endif
 
     SoapySDR::logf(SOAPY_SDR_DEBUG, "SoapyLiteXXTRX::setGain(%s, ch%d, %s, %f dB)",
                    dir2Str(direction), channel, name.c_str(), value);
 
     double &actualValue = _cachedGainValues[direction][channel][name];
 
+#ifdef USE_NG
+    if (direction == SOAPY_SDR_RX and name == "LNA") {
+        ret = _lms2->SetRFELNA_dB(value, chan);
+    }
+
+    if (direction == SOAPY_SDR_RX and name == "LB_LNA") {
+        ret = _lms2->SetRFELoopbackLNA_dB(value, chan);
+    }
+
+    if (direction == SOAPY_SDR_RX and name == "PGA") {
+        ret = _lms2->SetRBBPGA_dB(value, chan);
+    }
+
+    if (direction == SOAPY_SDR_RX and name == "TIA") {
+        ret = _lms2->SetRFETIA_dB(value, chan);
+    }
+
+    if (direction == SOAPY_SDR_TX and name == "PAD") {
+        ret = _lms2->SetTRFPAD_dB(value, chan);
+    }
+
+    if (direction == SOAPY_SDR_TX and name == "LB_PAD") {
+        ret = _lms2->SetTRFLoopbackPAD_dB(value, chan);
+    }
+
+    if (ret == lime::OpStatus::Success)
+        actualValue = value;
+#else
     if (direction == SOAPY_SDR_RX and name == "LNA") {
         actualValue = LMS7002M_rfe_set_lna(_lms, ch2LMS(channel), value);
     }
@@ -540,6 +572,7 @@ void SoapyLiteXXTRX::setGain(const int direction, const size_t channel,
         actualValue =
             LMS7002M_trf_set_loopback_pad(_lms, ch2LMS(channel), value);
     }
+#endif
 }
 
 double SoapyLiteXXTRX::getGain(const int direction, const size_t channel,
@@ -597,6 +630,8 @@ void SoapyLiteXXTRX::setFrequency(const int direction, const size_t channel,
         _cachedFreqValues[direction][1][name] = actualFreq;
     }
 
+#ifndef USE_NG
+    /* FIXME: read only with LimeSuiteNG */
     if (name == "BB") {
         const double baseRate = this->getTSPRate(direction);
         if (direction == SOAPY_SDR_RX)
@@ -607,6 +642,7 @@ void SoapyLiteXXTRX::setFrequency(const int direction, const size_t channel,
                                     frequency / baseRate);
         _cachedFreqValues[direction][channel][name] = frequency;
     }
+#endif
 }
 
 double SoapyLiteXXTRX::getFrequency(const int direction, const size_t channel,
@@ -641,6 +677,7 @@ SoapyLiteXXTRX::getFrequencyRange(const int direction, const size_t /*channel*/,
  * Sample Rate API
  ******************************************************************/
 
+// FIXME
 void SoapyLiteXXTRX::setSampleRate(const int direction, const size_t,
                               const double rate) {
     std::lock_guard<std::mutex> lock(_mutex);
@@ -717,7 +754,7 @@ void SoapyLiteXXTRX::setBandwidth(const int direction, const size_t channel,
                    dir2Str(direction), channel, bw / 1e6);
 
 #ifdef USE_NG
-	lime::OpStatus ret = lime::OpStatus::Success;
+    lime::OpStatus ret = lime::OpStatus::Success;
 #else
     int ret = 0;
 #endif
@@ -746,14 +783,14 @@ void SoapyLiteXXTRX::setBandwidth(const int direction, const size_t channel,
     }
 
 #ifdef USE_NG
-	if (ret != lime::OpStatus::Success)
+    if (ret != lime::OpStatus::Success)
 #else
     if (ret != 0)
 #endif
         throw std::runtime_error("SoapyLiteXXTRX::setBandwidth(" +
                                  std::to_string(bw / 1e6) + " MHz) failed - " +
 #ifdef USE_NG
-								 "");
+                                 "");
 #else
                                  std::to_string(ret));
 #endif
@@ -807,7 +844,7 @@ void SoapyLiteXXTRX::setMasterClockRate(const double rate) {
     std::lock_guard<std::mutex> lock(_mutex);
 
 #ifdef USE_NG
-	lime::LMS7002M::CGEN_details out;
+    lime::LMS7002M::CGEN_details out;
     lime::OpStatus ret = _lms2->SetFrequencyCGEN(rate, true, &out);
     if (ret == lime::OpStatus::Success) {
         _masterClockRate = out.frequency;
