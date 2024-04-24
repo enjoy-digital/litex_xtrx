@@ -141,9 +141,9 @@ SoapyLiteXXTRX::SoapyLiteXXTRX(const SoapySDR::Kwargs &args)
     // reset other FPGA peripherals
 #if 1
     // GGM Test
-    writeSetting("FPGA_DMA_LOOPBACK_ENABLE", "TRUE");
+    writeSetting("FPGA_DMA_LOOPBACK_ENABLE", "FALSE");
     writeSetting("FPGA_TX_PATTERN", "0");
-    writeSetting("FPGA_RX_PATTERN", "1");
+    writeSetting("FPGA_RX_PATTERN", "0");
 #else
     writeSetting("FPGA_DMA_LOOPBACK_ENABLE", "FALSE");
     writeSetting("FPGA_TX_PATTERN", "0");
