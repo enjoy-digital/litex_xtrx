@@ -346,6 +346,26 @@ std::vector<std::string> SoapyLiteXXTRX::listAntennas(const int direction,
     return ants;
 }
 
+#ifdef USE_NG
+#undef LMS7002M_RFE_NONE
+#undef LMS7002M_RFE_LNAH
+#undef LMS7002M_RFE_LNAL
+#undef LMS7002M_RFE_LNAW
+#undef LMS7002M_RFE_LB1
+#undef LMS7002M_RFE_LB2
+enum {
+    LMS7002M_RFE_NONE = 0,
+    LMS7002M_RFE_LNAH,
+    LMS7002M_RFE_LNAL,
+    LMS7002M_RFE_LNAW,
+};
+enum {
+    LMS7002M_RFE_LB1 = 1,
+    LMS7002M_RFE_LB2,
+};
+
+#endif
+
 void SoapyLiteXXTRX::setAntenna(const int direction, const size_t channel,
                            const std::string &name) {
     std::lock_guard<std::mutex> lock(_mutex);
@@ -372,7 +392,11 @@ void SoapyLiteXXTRX::setAntenna(const int direction, const size_t channel,
         else
             throw std::runtime_error("SoapyLiteXXTRX::setAntenna(RX, " + name +
                                      ") - unknown antenna name");
+#ifdef USE_NG
+        _lms2->SetPath(lime::TRXDir::Rx, channel % 2, path);
+#else
         LMS7002M_rfe_set_path(_lms, ch2LMS(channel), path);
+#endif
         litepcie_writel(_fd, CSR_RF_SWITCHES_RX_ADDR, rx_rf_switch);
     }
     if (direction == SOAPY_SDR_TX) {
@@ -389,7 +413,12 @@ void SoapyLiteXXTRX::setAntenna(const int direction, const size_t channel,
         else
             throw std::runtime_error("SoapyLiteXXTRX::setAntenna(TX, " + name +
                                      ") - unknown antenna name");
+#ifdef USE_NG
+        // FIXME: same ?
+        _lms2->SetPath(lime::TRXDir::Tx, channel % 2, band);
+#else
         LMS7002M_trf_select_band(_lms, ch2LMS(channel), band);
+#endif
         litepcie_writel(_fd, CSR_RF_SWITCHES_TX_ADDR, tx_rf_switch);
     }
     _cachedAntValues[direction][channel] = name;
