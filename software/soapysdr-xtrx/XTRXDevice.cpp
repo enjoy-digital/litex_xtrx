@@ -172,12 +172,12 @@ SoapyLiteXXTRX::SoapyLiteXXTRX(const SoapySDR::Kwargs &args)
 
     // read info register
 #ifdef USE_NG
-	uint16_t ver = _lms2->Get_SPI_Reg_bits(LMS7param(VER));
-	uint16_t rev = _lms2->Get_SPI_Reg_bits(LMS7param(REV));
+    uint16_t ver = _lms2->Get_SPI_Reg_bits(LMS7param(VER));
+    uint16_t rev = _lms2->Get_SPI_Reg_bits(LMS7param(REV));
 #else
     LMS7002M_regs_spi_read(_lms, 0x002f);
-	uint16_t ver = LMS7002M_regs(_lms)->reg_0x002f_ver;
-	uint16_t rev = LMS7002M_regs(_lms)->reg_0x002f_rev;
+    uint16_t ver = LMS7002M_regs(_lms)->reg_0x002f_ver;
+    uint16_t rev = LMS7002M_regs(_lms)->reg_0x002f_rev;
 #endif
     SoapySDR::logf(SOAPY_SDR_INFO, "LMS7002M info: revision %d, version %d", rev, ver);
 
@@ -190,10 +190,10 @@ SoapyLiteXXTRX::SoapyLiteXXTRX(const SoapySDR::Kwargs &args)
 
     // enable components
 #ifdef USE_NG
-	_lms2->EnableChannel(lime::TRXDir::Tx, 0, false);  // LMS_CHA
-	_lms2->EnableChannel(lime::TRXDir::Tx, 1, false);  // LMS_CHB
-	_lms2->EnableChannel(lime::TRXDir::Rx, 0, false);  // LMS_CHA
-	_lms2->EnableChannel(lime::TRXDir::Rx, 1, false);  // LMS_CHB
+    _lms2->EnableChannel(lime::TRXDir::Tx, 0, false);  // LMS_CHA
+    _lms2->EnableChannel(lime::TRXDir::Tx, 1, false);  // LMS_CHB
+    _lms2->EnableChannel(lime::TRXDir::Rx, 0, false);  // LMS_CHA
+    _lms2->EnableChannel(lime::TRXDir::Rx, 1, false);  // LMS_CHB
 #else
     LMS7002M_afe_enable(_lms, LMS_TX, LMS_CHA, true);
     LMS7002M_afe_enable(_lms, LMS_TX, LMS_CHB, true);
@@ -284,37 +284,37 @@ SoapyLiteXXTRX::SoapyLiteXXTRX(const SoapySDR::Kwargs &args)
 SoapyLiteXXTRX::configure_lml_port(uint8_t portNo, direction, int mckDiv)
 {
 #ifdef USE_NG
-	    //LML is in global register space
+    //LML is in global register space
     LMS7002M_set_mac_ch(self, LMS_CHAB);
 
     //set TRXIQ on both ports
     if (portNo == LMS_PORT1)
     {
-		_lms2->Modify_SPI_Reg_bits(LMS7param(LML1_MODE), 1);
-		_lms2->Modify_SPI_Reg_bits(LMS7param(LML1_RXNTXIQ), direction==LMS_TX ? 1 : 0); // 1 RXIQ, 0: TXIQ
+        _lms2->Modify_SPI_Reg_bits(LMS7param(LML1_MODE), 1);
+        _lms2->Modify_SPI_Reg_bits(LMS7param(LML1_RXNTXIQ), direction==LMS_TX ? 1 : 0); // 1 RXIQ, 0: TXIQ
     }
     if (portNo == LMS_PORT2)
     {
-		_lms2->Modify_SPI_Reg_bits(LMS7param(LML2_MODE), 1);
-		_lms2->Modify_SPI_Reg_bits(LMS7param(LML2_RXNTXIQ), direction==LMS_TX ? 1 : 0); // 1 RXIQ, 0: TXIQ
+        _lms2->Modify_SPI_Reg_bits(LMS7param(LML2_MODE), 1);
+        _lms2->Modify_SPI_Reg_bits(LMS7param(LML2_RXNTXIQ), direction==LMS_TX ? 1 : 0); // 1 RXIQ, 0: TXIQ
     }
 
     //automatic directions based on mode above
-	_lms2->Modify_SPI_Reg_bits(LMS7param(ENABLEDIRCTR1), 0);
-	_lms2->Modify_SPI_Reg_bits(LMS7param(ENABLEDIRCTR2), 0);
+    _lms2->Modify_SPI_Reg_bits(LMS7param(ENABLEDIRCTR1), 0);
+    _lms2->Modify_SPI_Reg_bits(LMS7param(ENABLEDIRCTR2), 0);
 
     //set the FIFO rd and wr clock muxes based on direction
     if (direction == LMS_TX)
     {
-		_lms2->Modify_SPI_Reg_bits(LMS7param(LMS7_TXRDCLK_MUX), 2); // Clock source is TxTSPCLK
-		_lms2->Modify_SPI_Reg_bits(LMS7param(LMS7_TXWDCLK_MUX),
-			(portNo==LMS_PORT1) ? 0x00 : 0x01); // 0: FCLK1, 1: FCLK2, 2/3: TxTSPCLK
+        _lms2->Modify_SPI_Reg_bits(LMS7param(LMS7_TXRDCLK_MUX), 2); // Clock source is TxTSPCLK
+        _lms2->Modify_SPI_Reg_bits(LMS7param(LMS7_TXWDCLK_MUX),
+            (portNo==LMS_PORT1) ? 0x00 : 0x01); // 0: FCLK1, 1: FCLK2, 2/3: TxTSPCLK
     }
     if (direction == LMS_RX)
     {
-		_lms2->Modify_SPI_Reg_bits(LMS7param(LMS7_RXRDCLK_MUX),
-			(portNo==LMS_PORT1) ? 0x00 : 0x01); // 0: MCLK1, 1: MCLK2, 2: FCLK1, 3: FCLK2
-		_lms2->Modify_SPI_Reg_bits(LMS7param(LMS7_RXWDCLK_MUX), 2); // Clock source is TxTSPCLK
+        _lms2->Modify_SPI_Reg_bits(LMS7param(LMS7_RXRDCLK_MUX),
+            (portNo==LMS_PORT1) ? 0x00 : 0x01); // 0: MCLK1, 1: MCLK2, 2: FCLK1, 3: FCLK2
+        _lms2->Modify_SPI_Reg_bits(LMS7param(LMS7_RXWDCLK_MUX), 2); // Clock source is TxTSPCLK
     }
 
     //data stream muxes
@@ -341,7 +341,7 @@ SoapyLiteXXTRX::configure_lml_port(uint8_t portNo, direction, int mckDiv)
             ((mclkDiv==1)?REG_0X002B_MCLK2SRC_RXTSPCLKA:REG_0X002B_MCLK2SRC_RXTSPCLKA_DIV);
     }
 
-	//clock divider (outputs to mclk pin)
+    //clock divider (outputs to mclk pin)
     if (direction == LMS_TX)
     {
         self->regs->reg_0x002b_txdiven = (mclkDiv > 1)?1:0;
@@ -384,14 +384,14 @@ SoapyLiteXXTRX::~SoapyLiteXXTRX(void) {
     // NOTE: disable if you want to inspect the configuration (e.g. in LimeGUI)
     //       or to validate the settings (e.g. using xtrx_litepcie_test)
 #ifdef USE_NG
-	_lms2->EnableChannel(lime::TRXDir::Tx, 0, false);  // LMS_CHA
-	_lms2->EnableChannel(lime::TRXDir::Tx, 1, false);  // LMS_CHB
-	_lms2->EnableChannel(lime::TRXDir::Rx, 0, false);  // LMS_CHA
-	_lms2->EnableChannel(lime::TRXDir::Rx, 1, false);  // LMS_CHB
-	// LMS7002M_rxtsp_enable/LMS7002M_txtsp_enable
-	// LMS7002M_rbb_enable/LMS7002M_tbb_enable
-	// are partially covered by EnableChannel
-	//
+    _lms2->EnableChannel(lime::TRXDir::Tx, 0, false);  // LMS_CHA
+    _lms2->EnableChannel(lime::TRXDir::Tx, 1, false);  // LMS_CHB
+    _lms2->EnableChannel(lime::TRXDir::Rx, 0, false);  // LMS_CHA
+    _lms2->EnableChannel(lime::TRXDir::Rx, 1, false);  // LMS_CHB
+    // LMS7002M_rxtsp_enable/LMS7002M_txtsp_enable
+    // LMS7002M_rbb_enable/LMS7002M_tbb_enable
+    // are partially covered by EnableChannel
+    //
 #else
     LMS7002M_afe_enable(_lms, LMS_TX, LMS_CHA, false);
     LMS7002M_afe_enable(_lms, LMS_TX, LMS_CHB, false);
@@ -406,11 +406,11 @@ SoapyLiteXXTRX::~SoapyLiteXXTRX(void) {
     LMS7002M_sxx_enable(_lms, LMS_RX, false);
     LMS7002M_sxx_enable(_lms, LMS_TX, false);
 #endif
-	/* FIXME: nothing equivalent */
+    /* FIXME: nothing equivalent */
     LMS7002M_xbuf_share_tx(_lms, false);
     LMS7002M_ldo_enable(_lms, false, LMS7002M_LDO_ALL);
 #ifdef USE_NG
-	delete _lms2;
+    delete _lms2;
 #else
     LMS7002M_power_down(_lms);
 #endif
