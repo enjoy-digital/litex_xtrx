@@ -288,6 +288,16 @@ SoapyLiteXXTRX::~SoapyLiteXXTRX(void) {
     // power down and clean up
     // NOTE: disable if you want to inspect the configuration (e.g. in LimeGUI)
     //       or to validate the settings (e.g. using xtrx_litepcie_test)
+#ifdef USE_NG
+	_lms2->EnableChannel(lime::TRXDir::Tx, 0, false);  // LMS_CHA
+	_lms2->EnableChannel(lime::TRXDir::Tx, 1, false);  // LMS_CHB
+	_lms2->EnableChannel(lime::TRXDir::Rx, 0, false);  // LMS_CHA
+	_lms2->EnableChannel(lime::TRXDir::Rx, 1, false);  // LMS_CHB
+	// LMS7002M_rxtsp_enable/LMS7002M_txtsp_enable
+	// LMS7002M_rbb_enable/LMS7002M_tbb_enable
+	// are partially covered by EnableChannel
+	//
+#else
     LMS7002M_afe_enable(_lms, LMS_TX, LMS_CHA, false);
     LMS7002M_afe_enable(_lms, LMS_TX, LMS_CHB, false);
     LMS7002M_afe_enable(_lms, LMS_RX, LMS_CHA, false);
@@ -300,9 +310,15 @@ SoapyLiteXXTRX::~SoapyLiteXXTRX(void) {
     LMS7002M_trf_enable(_lms, LMS_CHAB, false);
     LMS7002M_sxx_enable(_lms, LMS_RX, false);
     LMS7002M_sxx_enable(_lms, LMS_TX, false);
+#endif
+	/* FIXME: nothing equivalent */
     LMS7002M_xbuf_share_tx(_lms, false);
     LMS7002M_ldo_enable(_lms, false, LMS7002M_LDO_ALL);
+#ifdef USE_NG
+	delete _lms2;
+#else
     LMS7002M_power_down(_lms);
+#endif
     LMS7002M_destroy(_lms);
     close(_fd);
 }
