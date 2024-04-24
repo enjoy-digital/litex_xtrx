@@ -419,8 +419,13 @@ void SoapyLiteXXTRX::setDCOffsetMode(const int direction, const size_t channel,
     std::lock_guard<std::mutex> lock(_mutex);
 
     if (direction == SOAPY_SDR_RX) {
+#ifdef USE_NG
+    _lms2->Modify_SPI_Reg_bits(LMS7param(DC_BYP_RXTSP), automatic == 0, channel);
+    /* FIXME: missing window */
+#else
         LMS7002M_rxtsp_set_dc_correction(_lms, ch2LMS(channel), automatic,
                                          7 /*max*/);
+#endif
         _rxDCOffsetMode = automatic;
     } else {
         SoapySDR::Device::setDCOffsetMode(direction, channel, automatic);
@@ -450,9 +455,17 @@ void SoapyLiteXXTRX::setDCOffset(const int direction, const size_t channel,
                             const std::complex<double> &offset) {
     std::lock_guard<std::mutex> lock(_mutex);
 
+#ifdef USE_NG
+    const auto lmsDir = (direction == SOAPY_SDR_TX) ? lime::TRXDir::Tx : lime::TRXDir::Rx;
+    _lms2->Modify_SPI_Reg_bits(LMS7param(MAC), (channel % 2) + 1);
+    _lms2->SetDCOffset(lmsDir, offset.real(), offset.imag());
+#endif
+
     if (direction == SOAPY_SDR_TX) {
+#ifndef USE_NG
         LMS7002M_txtsp_set_dc_correction(_lms, ch2LMS(channel), offset.real(),
                                          offset.imag());
+#endif
         _txDCOffset = offset;
     } else {
         SoapySDR::Device::setDCOffset(direction, channel, offset);
@@ -472,6 +485,21 @@ void SoapyLiteXXTRX::setIQBalance(const int direction, const size_t channel,
                              const std::complex<double> &balance) {
     std::lock_guard<std::mutex> lock(_mutex);
 
+#ifdef USE_NG
+    const auto lmsDir = (direction == SOAPY_SDR_TX) ? lime::TRXDir::Tx : lime::TRXDir::Rx;
+    const double gain = std::abs(balance);
+    double gainI = 1.0;
+    double gainQ = 1.0;
+    if (gain < 1.0)
+        gainI = gain;
+
+    if (gain > 1.0)
+        gainQ = 1.0 / gain;
+
+    _lms2->Modify_SPI_Reg_bits(LMS7param(MAC), (channel % 2) + 1);
+    _lms2->SetIQBalance(lmsDir, std::arg(balance), gainI, gainQ);
+
+#else
     if (direction == SOAPY_SDR_TX) {
         LMS7002M_txtsp_set_iq_correction(_lms, ch2LMS(channel),
                                          std::arg(balance), std::abs(balance));
@@ -479,6 +507,7 @@ void SoapyLiteXXTRX::setIQBalance(const int direction, const size_t channel,
         LMS7002M_rxtsp_set_iq_correction(_lms, ch2LMS(channel),
                                          std::arg(balance), std::abs(balance));
     }
+#endif
     _cachedIqBalValues[direction][channel] = balance;
 }
 
