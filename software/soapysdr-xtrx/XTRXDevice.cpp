@@ -164,10 +164,11 @@ SoapyLiteXXTRX::SoapyLiteXXTRX(const SoapySDR::Kwargs &args)
     _lms2 = new lime::LMS7002M(_lms_spi);
     _lms2->SetReferenceClk_SX(lime::TRXDir::Rx, _refClockRate);
     _lms2->SetClockFreq(lime::LMS7002M::ClockID::CLK_REFERENCE, _refClockRate);
-#endif
-
+    _lms2->SoftReset();
+#else
     LMS7002M_reset(_lms);
-    LMS7002M_set_spi_mode(_lms, 4);
+    LMS7002M_set_spi_mode(_lms, 4); // nothing equivalent
+#endif
 
     // read info register
     LMS7002M_regs_spi_read(_lms, 0x002f);
