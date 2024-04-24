@@ -17,14 +17,19 @@
 #include <cstdlib>
 #include <stdexcept>
 #include <iostream>
+#include <memory>
 
 #include <LMS7002M/LMS7002M.h>
 #include "liblitepcie.h"
+#include <lms7002mNG/OpStatus.h>
+#include <lms7002mNG/LMS7002M.h>
 
 #define DLL_EXPORT __attribute__ ((visibility ("default")))
 #define BYTES_PER_SAMPLE 2 // TODO validate this
 
 enum class TargetDevice { CPU, GPU };
+
+class LMS_SPI;
 
 class DLL_EXPORT SoapyLiteXXTRX : public SoapySDR::Device {
   public:
@@ -346,6 +351,8 @@ class DLL_EXPORT SoapyLiteXXTRX : public SoapySDR::Device {
 
     int _fd;
     LMS7002M_t *_lms;
+    std::shared_ptr<LMS_SPI> _lms_spi;
+    lime::LMS7002M *_lms2;
     double _masterClockRate;
     double _refClockRate;
 

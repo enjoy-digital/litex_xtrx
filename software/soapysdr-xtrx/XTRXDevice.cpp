@@ -25,7 +25,52 @@
 #include <SoapySDR/Logger.hpp>
 #include <LMS7002M/LMS7002M_logger.h>
 #include <fstream>
+#include <memory>
 #include <sys/mman.h>
+
+#include <lms7002mNG/IComms.h>
+#include <lms7002mNG/OpStatus.h>
+
+#define USE_NG
+//#undef USE_NG
+
+class DLL_EXPORT LMS_SPI: public lime::ISPI {
+    public:
+        LMS_SPI(LMS7002M_t *lms, int fd):_lms(lms), _fd(fd) {}
+
+        lime::OpStatus SPI(const uint32_t* MOSI, uint32_t* MISO, uint32_t count) override
+        {
+            for (uint32_t i = 0; i < count; i++) {
+                    bool readback = !(MOSI[i] >> 31);
+                    uint32_t rd;
+                    uint32_t wr = MOSI[i];
+                    if (readback)
+                        wr = (0xffff & wr) << 16;
+                    rd = litepcie_interface_transact(&_fd, wr, readback);
+                    if (readback)
+                        MISO[i] = rd;
+            }
+            return lime::OpStatus::Success;
+        }
+
+        lime::OpStatus SPI(uint32_t spiBusAddress, const uint32_t* MOSI,
+            uint32_t* MISO, uint32_t count) override
+        {
+            for (uint32_t i = 0; i < count; i++) {
+                printf("%d addr %08x ", i, spiBusAddress);
+                if (MOSI)
+                    printf("MOSI %02x ", MOSI[i]);
+                if (MISO)
+                    printf("MISO %02x ", MISO[i]);
+                printf("\n");
+            }
+            return lime::OpStatus::Success;
+        }
+
+    private:
+        LMS7002M_t *_lms;
+        int _fd;
+};
 
 void customLogHandler(const LMS7_log_level_t level, const char *message) {
     switch (level) {
@@ -96,9 +141,9 @@ SoapyLiteXXTRX::SoapyLiteXXTRX(const SoapySDR::Kwargs &args)
     // reset other FPGA peripherals
 #if 1
     // GGM Test
-    writeSetting("FPGA_DMA_LOOPBACK_ENABLE", "FALSE");
+    writeSetting("FPGA_DMA_LOOPBACK_ENABLE", "TRUE");
     writeSetting("FPGA_TX_PATTERN", "0");
-    writeSetting("FPGA_RX_PATTERN", "0");
+    writeSetting("FPGA_RX_PATTERN", "1");
 #else
     writeSetting("FPGA_DMA_LOOPBACK_ENABLE", "FALSE");
     writeSetting("FPGA_TX_PATTERN", "0");
@@ -109,9 +154,18 @@ SoapyLiteXXTRX::SoapyLiteXXTRX(const SoapySDR::Kwargs &args)
 
     // setup LMS7002M
     _lms = LMS7002M_create(litepcie_interface_transact, &_fd);
-    if (_lms == NULL)
+    if (_lms == NULL) {
         throw std::runtime_error(
             "SoapyLiteXXTRX(): failed to LMS7002M_create()");
+    }
+    /* hack */
+#ifdef USE_NG
+    _lms_spi = std::make_shared<LMS_SPI>(_lms, _fd);
+    _lms2 = new lime::LMS7002M(_lms_spi);
+    _lms2->SetReferenceClk_SX(lime::TRXDir::Rx, _refClockRate);
+    _lms2->SetClockFreq(lime::LMS7002M::ClockID::CLK_REFERENCE, _refClockRate);
+#endif
+
     LMS7002M_reset(_lms);
     LMS7002M_set_spi_mode(_lms, 4);
 
@@ -364,7 +418,9 @@ void SoapyLiteXXTRX::setDCOffsetMode(const int direction, const size_t channel,
     std::lock_guard<std::mutex> lock(_mutex);
 
     if (direction == SOAPY_SDR_RX) {
-        LMS7002M_rxtsp_set_dc_correction(_lms, ch2LMS(channel), automatic);
+        LMS7002M_rxtsp_set_dc_correction(_lms, ch2LMS(channel), automatic,
+                                         7 /*max*/);
+        _rxDCOffsetMode = automatic;
     } else {
         SoapySDR::Device::setDCOffsetMode(direction, channel, automatic);
     }
@@ -524,12 +580,18 @@ void SoapyLiteXXTRX::setFrequency(const int direction, const size_t channel,
 
     if (name == "RF") {
         double actualFreq = 0.0;
+#ifndef USE_NG
         int ret = LMS7002M_set_lo_freq(_lms, dir2LMS(direction), _refClockRate,
                                        frequency, &actualFreq);
         if (ret != 0)
+#else
+        lime::OpStatus ret = _lms2->SetFrequencySX(
+            ((direction == SOAPY_SDR_RX)?lime::TRXDir::Rx:lime::TRXDir::Tx), frequency);
+        if (ret != lime::OpStatus::Success)
+#endif
             throw std::runtime_error("SoapyLiteXXTRX::setFrequency(" +
                                      std::to_string(frequency / 1e6) +
-                                     " MHz) failed - " + std::to_string(ret));
+                                     " MHz) failed - "/* + std::to_string(ret)*/);
         _cachedFreqValues[direction][0][name] = actualFreq;
         _cachedFreqValues[direction][1][name] = actualFreq;
     }
@@ -657,13 +719,13 @@ void SoapyLiteXXTRX::setBandwidth(const int direction, const size_t channel,
     double &actualBw = _cachedFilterBws[direction][channel];
     if (direction == SOAPY_SDR_RX) {
         //ret = LMS7002M_rbb_set_filter_bw(_lms, ch2LMS(channel), bw, &actualBw);
-        ret = LMS7002M_mcu_calibration_rx(_lms, ch2LMS(channel), _refClockRate, bw);
+        ret = LMS7002M_mcu_calibration_rx(_lms, _refClockRate, bw);
         if (ret == 0)
             actualBw = bw;
     }
     if (direction == SOAPY_SDR_TX) {
         //ret = LMS7002M_tbb_set_filter_bw(_lms, ch2LMS(channel), bw, &actualBw);
-        ret = LMS7002M_mcu_calibration_tx(_lms, ch2LMS(channel), _refClockRate, bw);
+        ret = LMS7002M_mcu_calibration_tx(_lms, _refClockRate, bw);
         if (ret == 0)
             actualBw = bw;
     }
