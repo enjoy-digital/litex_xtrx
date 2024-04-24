@@ -97,6 +97,16 @@ make
 sudo make install
 ```
 
+#### [> Install LMS7002MNG Driver (extracted from LimeSuiteNG)
+```bash
+cd software/lms7002mNG
+mkdir build
+cd build
+cmake ../
+make
+sudo make install
+```
+
 #### [> Install SoapySDR Driver
 ```bash
 cd software/soapysdr-xtrx
