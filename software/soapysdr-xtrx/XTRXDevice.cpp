@@ -35,6 +35,19 @@
 #define USE_NG
 #undef USE_NG
 //#define USE_NG2
+//#define USE_OLD
+
+/* Default configuration
+ * mainly for TX->PORT2 & RX->PORT1
+ * FIXME: registers details
+ */
+std::map<uint32_t, uint32_t> xtrx_default_cfg = {
+	{0x0023, 0x5542},
+	{0x002a, 0x0192},
+	{0x002b, 0x002c},
+	{0x002c, 0xffff},
+	{0x00ad, 0x03f3},
+};
 
 class DLL_EXPORT LMS_SPI: public lime::ISPI {
     public:
@@ -186,8 +199,13 @@ SoapyLiteXXTRX::SoapyLiteXXTRX(const SoapySDR::Kwargs &args)
     this->setClockSource("internal");
 
     // configure data port directions and data clock rates
+#ifdef USE_OLD
     LMS7002M_configure_lml_port(_lms, LMS_PORT2, LMS_TX, 1);
     LMS7002M_configure_lml_port(_lms, LMS_PORT1, LMS_RX, 1);
+#else
+	for (auto &p: xtrx_default_cfg)
+		_lms2->SPI_write(p.first, p.second);
+#endif
 
     // enable components
 #ifdef USE_NG
@@ -281,89 +299,6 @@ SoapyLiteXXTRX::SoapyLiteXXTRX(const SoapySDR::Kwargs &args)
     SoapySDR::log(SOAPY_SDR_INFO, "SoapyLiteXXTRX initialization complete");
 }
 
-#if 0
-SoapyLiteXXTRX::configure_lml_port(uint8_t portNo, direction, int mckDiv)
-{
-#ifdef USE_NG
-    //LML is in global register space
-    LMS7002M_set_mac_ch(self, LMS_CHAB);
-
-    //set TRXIQ on both ports
-    if (portNo == LMS_PORT1)
-    {
-        _lms2->Modify_SPI_Reg_bits(LMS7param(LML1_MODE), 1);
-        _lms2->Modify_SPI_Reg_bits(LMS7param(LML1_RXNTXIQ), direction==LMS_TX ? 1 : 0); // 1 RXIQ, 0: TXIQ
-    }
-    if (portNo == LMS_PORT2)
-    {
-        _lms2->Modify_SPI_Reg_bits(LMS7param(LML2_MODE), 1);
-        _lms2->Modify_SPI_Reg_bits(LMS7param(LML2_RXNTXIQ), direction==LMS_TX ? 1 : 0); // 1 RXIQ, 0: TXIQ
-    }
-
-    //automatic directions based on mode above
-    _lms2->Modify_SPI_Reg_bits(LMS7param(ENABLEDIRCTR1), 0);
-    _lms2->Modify_SPI_Reg_bits(LMS7param(ENABLEDIRCTR2), 0);
-
-    //set the FIFO rd and wr clock muxes based on direction
-    if (direction == LMS_TX)
-    {
-        _lms2->Modify_SPI_Reg_bits(LMS7param(LMS7_TXRDCLK_MUX), 2); // Clock source is TxTSPCLK
-        _lms2->Modify_SPI_Reg_bits(LMS7param(LMS7_TXWDCLK_MUX),
-            (portNo==LMS_PORT1) ? 0x00 : 0x01); // 0: FCLK1, 1: FCLK2, 2/3: TxTSPCLK
-    }
-    if (direction == LMS_RX)
-    {
-        _lms2->Modify_SPI_Reg_bits(LMS7param(LMS7_RXRDCLK_MUX),
-            (portNo==LMS_PORT1) ? 0x00 : 0x01); // 0: MCLK1, 1: MCLK2, 2: FCLK1, 3: FCLK2
-        _lms2->Modify_SPI_Reg_bits(LMS7param(LMS7_RXWDCLK_MUX), 2); // Clock source is TxTSPCLK
-    }
-
-    //data stream muxes
-    if (direction == LMS_TX)
-    {
-        self->regs->reg_0x002a_tx_mux = (portNo==LMS_PORT1)?REG_0X002A_TX_MUX_PORT1:REG_0X002A_TX_MUX_PORT2;
-    }
-    if (direction == LMS_RX)
-    {
-        self->regs->reg_0x002a_rx_mux = REG_0X002A_RX_MUX_RXTSP;
-    }
-
-    //clock mux (outputs to mclk pin)
-    if (portNo == LMS_PORT1)
-    {
-        self->regs->reg_0x002b_mclk1src = (direction==LMS_TX)?
-            ((mclkDiv==1)?REG_0X002B_MCLK1SRC_TXTSPCLKA:REG_0X002B_MCLK1SRC_TXTSPCLKA_DIV):
-            ((mclkDiv==1)?REG_0X002B_MCLK1SRC_RXTSPCLKA:REG_0X002B_MCLK1SRC_RXTSPCLKA_DIV);
-    }
-    if (portNo == LMS_PORT2)
-    {
-        self->regs->reg_0x002b_mclk2src = (direction==LMS_TX)?
-            ((mclkDiv==1)?REG_0X002B_MCLK2SRC_TXTSPCLKA:REG_0X002B_MCLK2SRC_TXTSPCLKA_DIV):
-            ((mclkDiv==1)?REG_0X002B_MCLK2SRC_RXTSPCLKA:REG_0X002B_MCLK2SRC_RXTSPCLKA_DIV);
-    }
-
-    //clock divider (outputs to mclk pin)
-    if (direction == LMS_TX)
-    {
-        self->regs->reg_0x002b_txdiven = (mclkDiv > 1)?1:0;
-        self->regs->reg_0x002c_txtspclk_div = (mclkDiv/2)-1;
-    }
-    if (direction == LMS_RX)
-    {
-        self->regs->reg_0x002b_rxdiven = (mclkDiv > 1)?1:0;
-        self->regs->reg_0x002c_rxtspclk_div = (mclkDiv/2)-1;
-    }
-
-    // TODO: Elliot has found that we need to invert the LML clocks
-    //       to avoid terrible spiking behavior when running a
-    //       TBB baseband loopback.
-    self->regs->reg_0x00ad_value = 0x03f3;
-#else
-    LMS7002M_configure_lml_port(_lms, LMS_PORT2, LMS_TX, 1);
-#endif
-}
-#endif
-
 SoapyLiteXXTRX::~SoapyLiteXXTRX(void) {
     SoapySDR::log(SOAPY_SDR_INFO, "Power down and cleanup");
     if (_rx_stream.opened) {
@@ -410,12 +345,10 @@ SoapyLiteXXTRX::~SoapyLiteXXTRX(void) {
     /* FIXME: nothing equivalent */
     LMS7002M_xbuf_share_tx(_lms, false);
     LMS7002M_ldo_enable(_lms, false, LMS7002M_LDO_ALL);
-#ifdef USE_NG2
-    delete _lms2;
-#else
     LMS7002M_power_down(_lms);
-#endif
     LMS7002M_destroy(_lms);
+
+    delete _lms2;
     close(_fd);
 }
 
@@ -504,7 +437,7 @@ void SoapyLiteXXTRX::setAntenna(const int direction, const size_t channel,
         else
             throw std::runtime_error("SoapyLiteXXTRX::setAntenna(RX, " + name +
                                      ") - unknown antenna name");
-#ifdef USE_OLD
+#ifndef USE_OLD
         _lms2->SetPath(lime::TRXDir::Rx, channel % 2, path);
 #else
         LMS7002M_rfe_set_path(_lms, ch2LMS(channel), path);
@@ -525,7 +458,7 @@ void SoapyLiteXXTRX::setAntenna(const int direction, const size_t channel,
         else
             throw std::runtime_error("SoapyLiteXXTRX::setAntenna(TX, " + name +
                                      ") - unknown antenna name");
-#ifdef USE_OLD
+#ifndef USE_OLD
         // FIXME: same ?
         _lms2->SetPath(lime::TRXDir::Tx, channel % 2, band);
 #else
