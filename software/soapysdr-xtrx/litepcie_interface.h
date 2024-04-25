@@ -9,6 +9,8 @@
 #define LITEPCIE_SPI_DONE    (1 << 0)
 #define LITEPCIE_SPI_LENGTH  (1 << 8)
 
+//#define DBG_TRANSACTION
+
 static inline uint32_t litepcie_interface_transact(void *handle, const uint32_t data_in, const bool readback)
 {
     int *fd = (int *)handle;
@@ -24,8 +26,16 @@ static inline uint32_t litepcie_interface_transact(void *handle, const uint32_t 
 
     //load rx data
     if (readback) {
-        return litepcie_readl(*fd, CSR_LMS7002M_SPI_MISO_ADDR) & 0xffff;
+        uint32_t ret = litepcie_readl(*fd, CSR_LMS7002M_SPI_MISO_ADDR) & 0xffff;
+#ifdef DBG_TRANSACTION
+		printf("%s write read addr: 0x%04x -> %08x\n", __func__, 0x7fff & (data_in >> 16), ret);
+#endif
+		return ret;
     } else {
+#ifdef DBG_TRANSACTION
+		printf("%s write only addr: 0x%04x value: 0x%04x\n", __func__,
+			0x7fff & (data_in >> 16), data_in & 0xffff);
+#endif
         return 0;
     }
 }
