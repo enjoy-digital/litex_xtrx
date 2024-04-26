@@ -290,6 +290,15 @@ class DLL_EXPORT SoapyLiteXXTRX : public SoapySDR::Device {
     SoapySDR::Stream *const TX_STREAM = (SoapySDR::Stream *)0x1;
     SoapySDR::Stream *const RX_STREAM = (SoapySDR::Stream *)0x2;
 
+	void rxtsp_set_iq_correction(
+	    const size_t channel,
+	    const double phase,
+	    const double gain);
+	void txtsp_set_iq_correction(
+	    const size_t channel,
+	    const double phase,
+	    const double gain);
+
     struct litepcie_ioctl_mmap_dma_info _dma_mmap_info;
     void *_dma_buf;
 
