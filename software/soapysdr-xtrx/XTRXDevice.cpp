@@ -52,9 +52,10 @@ std::map<uint32_t, uint32_t> xtrx_default_cfg = {
     {0x0085, 0x0019}, // [4] EN_OUT2_XBUF_TX:   TX XBUF 2nd output is disabled
                       // [3] EN_TBUFIN_XBUF_RX: RX XBUF input is coming from TX
     /* LDO */
-    {0x0092, 0xffff},
-    {0x0093, 0x03ff},
-    {0x00a6, 0x0001},
+    {0x0092, 0x0D15}, // orig: 0xffff
+    {0x0093, 0x01B1}, // orig: 0x03ff
+    {0x00A6, 0x000F}, // orig: 0x0001
+
 };
 
 class DLL_EXPORT LMS_SPI: public lime::ISPI {
