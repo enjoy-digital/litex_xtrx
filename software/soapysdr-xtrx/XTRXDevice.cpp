@@ -609,6 +609,69 @@ std::vector<std::string> SoapyLiteXXTRX::listGains(const int direction,
     return gains;
 }
 
+constexpr static int MAXIMUM_GAIN_VALUE = 74;
+// clang-format off
+// LNA table
+constexpr static std::array<unsigned int, MAXIMUM_GAIN_VALUE> LNATable = {
+    0,  0,  0,  1,  1,  1,  2,  2,  2,  3,  3,  3,  4,  4,  4,  5,
+    5,  5,  6,  6,  6,  7,  7,  7,  8,  9,  10, 11, 11, 11, 11, 11,
+    11, 11, 11, 11, 11, 11, 11, 11, 12, 13, 14, 14, 14, 14, 14, 14,
+    14, 14, 14, 14, 14, 14, 14, 14, 14, 14, 14, 14, 14, 14, 14, 14,
+    14, 14, 14, 14, 14, 14, 14, 14, 14, 14
+};
+// PGA table
+constexpr static std::array<unsigned int, MAXIMUM_GAIN_VALUE> PGATable = {
+    0,  1,  2,  0,  1,  2,  0,  1,  2,  0,  1,  2,  0,  1,  2,  0,
+    1,  2,  0,  1,  2,  0,  1,  2,  0,  0,  0,  0,  1,  2,  3,  4,
+    5,  6,  7,  8,  9,  10, 11, 12, 12, 12, 12, 4,  5,  6,  7,  8,
+    9,  10, 11, 12, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21,
+    22, 23, 24, 25, 26, 27, 28, 29, 30, 31
+};
+// clang-format on
+
+void SoapyLiteXXTRX::setGain(int direction, size_t channel, const double value) {
+    std::lock_guard<std::mutex> lock(_mutex);
+    double val = value;
+    lime::LMS7002M::Channel chan = channel > 0 ? lime::LMS7002M::Channel::ChB : lime::LMS7002M::Channel::ChA;
+
+    SoapySDR::logf(SOAPY_SDR_DEBUG, "SoapyLiteXXTRX::setGain(%s, ch%d, %f dB)",
+                   dir2Str(direction), channel, value);
+
+    if (SOAPY_SDR_TX == direction) {
+        if (_lms2->SetTRFPAD_dB(value, chan) != lime::OpStatus::Success)
+            throw std::runtime_error("SoapyLiteXXTRX::setGain(" +
+                                     std::to_string(value) + " dB) failed - ");
+
+        val -= _lms2->GetTRFPAD_dB(chan);
+        if (_lms2->SetTBBIAMP_dB(val, chan) != lime::OpStatus::Success)
+            throw std::runtime_error("SoapyLiteXXTRX::setGain(" +
+                                     std::to_string(value) + " dB) failed - ");
+    } else {
+        val = std::clamp(static_cast<int>(value + 12), 0, MAXIMUM_GAIN_VALUE - 1);
+
+        unsigned int lna = LNATable.at(std::lround(val));
+        unsigned int pga = PGATable.at(std::lround(val));
+
+        unsigned int tia = 0;
+        // TIA table
+        if (val > 51)
+            tia = 2;
+        else if (val > 42)
+            tia = 1;
+        int rcc_ctl_pga_rbb = (430 * (pow(0.65, pga / 10.0)) - 110.35) / 20.4516 + 16; // From datasheet
+
+        if ((_lms2->Modify_SPI_Reg_bits(LMS7param(G_LNA_RFE), lna + 1) != lime::OpStatus::Success) ||
+            (_lms2->Modify_SPI_Reg_bits(LMS7param(G_TIA_RFE), tia + 1) != lime::OpStatus::Success) ||
+            (_lms2->Modify_SPI_Reg_bits(LMS7param(G_PGA_RBB), pga) != lime::OpStatus::Success) ||
+            (_lms2->Modify_SPI_Reg_bits(LMS7param(RCC_CTL_PGA_RBB), rcc_ctl_pga_rbb) != lime::OpStatus::Success))
+        {
+            throw std::runtime_error("SoapyLiteXXTRX::setGain(" +
+                                     std::to_string(value) + " dB) failed - ");
+        }
+
+    }
+}
+
 void SoapyLiteXXTRX::setGain(const int direction, const size_t channel,
                         const std::string &name, const double value) {
     std::lock_guard<std::mutex> lock(_mutex);
