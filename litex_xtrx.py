@@ -103,16 +103,17 @@ class BaseSoC(SoCCore):
         "analyzer"    : 30,
     }
 
-    def __init__(self, version="fairwaves", variant="xc7a50t", sys_clk_freq=int(125e6),
+    def __init__(self, board="fairwaves", sys_clk_freq=int(125e6),
         with_cpu      =True, cpu_firmware=None,
         with_jtagbone = True,
         with_analyzer = True,
     ):
         # Platform ---------------------------------------------------------------------------------
         platform = {
-            "fairwaves": fairwaves_xtrx.Platform(variant=variant),
-            "lime"     : limesdr_xtrx.Platform()
-        }[version]
+            "fairwaves_cs"  : fairwaves_xtrx.Platform(variant="xc7a35t"),
+            "fairwaves_pro" : fairwaves_xtrx.Platform(variant="xc7a50t"),
+            "limesdr"       : limesdr_xtrx.Platform()
+        }[board]
 
         # Configuration: See if useful in longterm and integrate properly.
         with_rx_pattern = False
@@ -126,7 +127,7 @@ class BaseSoC(SoCCore):
 
         # SoCCore ----------------------------------------------------------------------------------
         SoCCore.__init__(self, platform, sys_clk_freq,
-            ident                    = f"LiteX SoC on {version.capitalize()} XTRX ",
+            ident                    = f"LiteX SoC on {board.capitalize()} XTRX ",
             ident_version            = True,
             cpu_type                 = "vexriscv" if with_cpu else None,
             cpu_variant              = "minimal",
@@ -369,9 +370,8 @@ class BaseSoC(SoCCore):
 # Build --------------------------------------------------------------------------------------------
 
 def main():
-    parser = argparse.ArgumentParser(description="LiteX SoC on Fairwaves XTRX")
-    parser.add_argument("--version", default="fairwaves", help="Select XTRX version (fairwaves or lime).")
-    parser.add_argument("--variant", default="xc7a50t",   help="Select XTRX variant (xc7a50t aka pro or xc7a35t aka non-pro).")
+    parser = argparse.ArgumentParser(description="LiteX SoC on Fairwaves/LimeSDR XTRX")
+    parser.add_argument("--board",   default="fairwaves_pro", help="Select XTRX board.", choices=["fairwaves_cs", "fairwaves_pro", "limesdr"])
     parser.add_argument("--build",   action="store_true", help="Build bitstream.")
     parser.add_argument("--load",    action="store_true", help="Load bitstream.")
     parser.add_argument("--flash",   action="store_true", help="Flash bitstream.")
@@ -383,8 +383,7 @@ def main():
         prepare = (run == 0)
         build   = ((run == 1) & args.build)
         soc = BaseSoC(
-            version      = args.version,
-            variant      = args.variant,
+            board        = args.board,
             cpu_firmware = None if prepare else "firmware/firmware.bin",
         )
         builder = Builder(soc, csr_csv="csr.csv")
