@@ -132,14 +132,16 @@ class BaseSoC(SoCCore):
         "analyzer"    : 30,
     }
 
-    def __init__(self, sys_clk_freq=int(125e6), variant="xc7a50t", with_cpu=True, cpu_firmware=None,
+    def __init__(self, version="fairwaves", variant="xc7a50t", sys_clk_freq=int(125e6),
+        with_cpu      =True, cpu_firmware=None,
         with_jtagbone = True,
         with_analyzer = True,
-        version       = "fairwaves"):
-        if version == "fairwaves":
-            platform = fairwaves_xtrx.Platform(variant=variant)
-        else:
-            platform = limesdr_xtrx.Platform()
+    ):
+        # Platform ---------------------------------------------------------------------------------
+        platform = {
+            "fairwaves": fairwaves_xtrx.Platform(variant=variant),
+            "lime"     : limesdr_xtrx.Platform()
+        }[version]
 
         # Git SHA/Dirty. CHECKME: See if useful.
         git_sha = subprocess.check_output(['git', 'rev-parse', '--short', 'HEAD']).strip().decode('utf-8')
@@ -374,8 +376,8 @@ class BaseSoC(SoCCore):
 
 def main():
     parser = argparse.ArgumentParser(description="LiteX SoC on Fairwaves XTRX")
-    parser.add_argument("--variant", default="xc7a50t",   help="Select XTRX variant (xc7a50t aka pro or xc7a35t aka non-pro).")
     parser.add_argument("--version", default="fairwaves", help="Select XTRX version (fairwaves or lime).")
+    parser.add_argument("--variant", default="xc7a50t",   help="Select XTRX variant (xc7a50t aka pro or xc7a35t aka non-pro).")
     parser.add_argument("--build",   action="store_true", help="Build bitstream.")
     parser.add_argument("--load",    action="store_true", help="Load bitstream.")
     parser.add_argument("--flash",   action="store_true", help="Flash bitstream.")
@@ -386,9 +388,10 @@ def main():
     for run in range(2):
         prepare = (run == 0)
         build   = ((run == 1) & args.build)
-        soc = BaseSoC(cpu_firmware=None if prepare else "firmware/firmware.bin",
-            variant = args.variant,
-            version = args.version,
+        soc = BaseSoC(
+            version      = args.version,
+            variant      = args.variant,
+            cpu_firmware = None if prepare else "firmware/firmware.bin",
         )
         builder = Builder(soc, csr_csv="csr.csv")
         builder.build(run=build)
