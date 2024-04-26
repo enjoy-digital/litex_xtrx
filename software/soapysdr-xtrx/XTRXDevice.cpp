@@ -47,6 +47,14 @@ std::map<uint32_t, uint32_t> xtrx_default_cfg = {
     {0x002b, 0x002c},
     {0x002c, 0xffff},
     {0x00ad, 0x03f3},
+    /* XTRX specific */
+    /* XBUS */
+    {0x0085, 0x0019}, // [4] EN_OUT2_XBUF_TX:   TX XBUF 2nd output is disabled
+                      // [3] EN_TBUFIN_XBUF_RX: RX XBUF input is coming from TX
+    /* LDO */
+    {0x0092, 0xffff},
+    {0x0093, 0x03ff},
+    {0x00a6, 0x0001},
 };
 
 class DLL_EXPORT LMS_SPI: public lime::ISPI {
@@ -208,7 +216,7 @@ SoapyLiteXXTRX::SoapyLiteXXTRX(const SoapySDR::Kwargs &args)
 #endif
 
     // enable components
-#ifdef USE_NG
+#ifndef USE_OLD
     _lms2->EnableChannel(lime::TRXDir::Tx, 0, true);  // LMS_CHA
     _lms2->EnableChannel(lime::TRXDir::Tx, 1, true);  // LMS_CHB
     _lms2->EnableChannel(lime::TRXDir::Rx, 0, true);  // LMS_CHA
@@ -235,8 +243,10 @@ SoapyLiteXXTRX::SoapyLiteXXTRX(const SoapySDR::Kwargs &args)
 #endif
 
     // XTRX-specific configuration
+#ifdef USE_OLD
     LMS7002M_ldo_enable(_lms, true, LMS7002M_LDO_ALL);
     LMS7002M_xbuf_share_tx(_lms, true);
+#endif
 
     // turn the clocks on (tested frequencies: 61.44MHZ, 122.88MHZ)
     //this->setMasterClockRate(122.88e6);
@@ -319,7 +329,7 @@ SoapyLiteXXTRX::~SoapyLiteXXTRX(void) {
     // power down and clean up
     // NOTE: disable if you want to inspect the configuration (e.g. in LimeGUI)
     //       or to validate the settings (e.g. using xtrx_litepcie_test)
-#ifdef USE_NG
+#ifndef USE_OLD
     _lms2->EnableChannel(lime::TRXDir::Tx, 0, false);  // LMS_CHA
     _lms2->EnableChannel(lime::TRXDir::Tx, 1, false);  // LMS_CHB
     _lms2->EnableChannel(lime::TRXDir::Rx, 0, false);  // LMS_CHA
