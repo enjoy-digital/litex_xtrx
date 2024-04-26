@@ -49,34 +49,6 @@ from gateware.lms7002m    import LMS7002M
 
 from software import generate_litepcie_software
 
-class MYTXPatternGenerator(LiteXModule): # FIXME: Integrate Pattern properly.
-    def __init__(self):
-        self.source  = stream.Endpoint([("data", 32)])
-
-        # # #
-
-        # Control-Path.
-        # -------------
-        self.comb += self.source.valid.eq(1)
-        self.sync += self.source.last.eq(0)
-
-        # Generator.
-        # ----------
-
-        # Counter.
-        count = Signal(12)
-        self.sync += [
-            count.eq(count + 1),
-        ]
-
-        # Data-Path.
-        # ----------
-        self.sync += [
-            self.source.data.eq(0),
-            self.source.data[ 0:12].eq(count[ 0:11]), # FIXME: sign extension
-            self.source.data[16:28].eq(count[ 0:11]), # FIXME: sign extension
-        ]
-
 # CRG ----------------------------------------------------------------------------------------------
 
 class CRG(LiteXModule):
@@ -299,6 +271,33 @@ class BaseSoC(SoCCore):
         if with_rxtx_loop:
             self.comb += self.pcie_dma0.source.connect(self.pcie_dma0.sink)
         elif with_rx_pattern:
+            class MYTXPatternGenerator(LiteXModule): # FIXME: Integrate Pattern properly or remove.
+                def __init__(self):
+                    self.source  = stream.Endpoint([("data", 32)])
+
+                    # # #
+
+                    # Control-Path.
+                    # -------------
+                    self.comb += self.source.valid.eq(1)
+                    self.sync += self.source.last.eq(0)
+
+                    # Generator.
+                    # ----------
+
+                    # Counter.
+                    count = Signal(12)
+                    self.sync += [
+                        count.eq(count + 1),
+                    ]
+
+                    # Data-Path.
+                    # ----------
+                    self.sync += [
+                        self.source.data.eq(0),
+                        self.source.data[ 0:12].eq(count[ 0:11]), # FIXME: sign extension
+                        self.source.data[16:28].eq(count[ 0:11]), # FIXME: sign extension
+                    ]
             test_tx_pat = MYTXPatternGenerator()
             self.test_tx_pat = test_tx_pat
             self.rx_conv    = rx_conv    = stream.Converter(32, 64)
