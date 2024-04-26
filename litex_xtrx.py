@@ -20,7 +20,7 @@ from litex_boards.platforms import fairwaves_xtrx
 from litex_boards.platforms import limesdr_xtrx
 
 from litex.soc.interconnect.csr import *
-from litex.soc.interconnect import stream
+from litex.soc.interconnect     import stream
 
 from litex.soc.integration.soc_core import *
 from litex.soc.integration.builder  import *
@@ -104,9 +104,8 @@ class BaseSoC(SoCCore):
     }
 
     def __init__(self, board="fairwaves", sys_clk_freq=int(125e6),
-        with_cpu      =True, cpu_firmware=None,
+        with_cpu      = True, cpu_firmware=None,
         with_jtagbone = True,
-        with_analyzer = True,
     ):
         # Platform ---------------------------------------------------------------------------------
         platform = {
@@ -191,17 +190,17 @@ class BaseSoC(SoCCore):
             with_msi              = True
         )
 
-        # I2C Bus0:
+        # I2C Bus0 ---------------------------------------------------------------------------------
         # - Temperature Sensor (TMP108  @ 0x4a) Lime: (TMP1075 @ 0x4b).
         # - PMIC-LMS           (LP8758  @ 0x60).
         # - VCTCXO DAC         Rev4: (MCP4725 @ 0x62) Rev5: (DAC60501 @ 0x4b) Lime: (AD5693 @ 0x4c).
         self.i2c0 = I2CMaster(pads=platform.request("i2c", 0))
 
-        # I2C Bus1:
+        # I2C Bus1 ---------------------------------------------------------------------------------
         # PMIC-FPGA (LP8758 @ 0x60).
         self.i2c1 = I2CMaster(pads=platform.request("i2c", 1))
 
-        # XSYNC SPI Bus:
+        # XSYNC SPI Bus ----------------------------------------------------------------------------
         xsync_spi_pads      = platform.request("xsync_spi")
         xsync_spi_pads.miso = Signal() # SPI is 3-wire, add fake MISO. Will only allow writes, not reads.
         self.xsync_spi = SPIMaster(
@@ -211,13 +210,13 @@ class BaseSoC(SoCCore):
             spi_clk_freq = 1e6
         )
 
-        # PMIC-FPGA:
+        # PMIC-FPGA --------------------------------------------------------------------------------
         # Buck0: 1.0V VCCINT + 1.0V MGTAVCC.
         # Buck1: 1.8V/3.3V VCCIO (DIGPRVDD2/DIGPRVDD3/DIGPRPOC + VDD18_TXBUF of LMS + Bank 0/14/16/34/35 of FPGA).
         # Buck2: 1.2V MGTAVTT + 1.2V VDLMS (VDD12_DIG / VDD_SPI_BUF / DVDD_SXR / DVDD_SXT / DVDD_CGEN).
         # Buck3: 1.8V VCCAUX  + 1.8V VDLMS (VDD18_DIG).
 
-        # PMIC-LMS:
+        # PMIC-LMS ---------------------------------------------------------------------------------
         # Buck0: +2.05V (used as input to 1.8V LDO for LMS analog 1.8V).
         # Buck1: +3.3V rail.
         # Buck2: +1.75V (used as input to 1.4V LDO for LMS analog 1.4V).
@@ -250,114 +249,7 @@ class BaseSoC(SoCCore):
             tx_delay_init = 16,
             rx_delay_init = 16
         )
-
-        # FIXME: Too complicated to apprehend, simplify and integrate properly.
-        if with_tx_test:
-            self.tx0_i = Signal(16)
-            self.tx0_q = Signal(16)
-            self.tx1_i = Signal(16)
-            self.tx1_q = Signal(16)
-            self.comb += self.pcie_dma0.source.ready.eq(1),
-            self.sync += [
-                If(self.pcie_dma0.source.valid,
-                    self.tx0_i.eq(self.pcie_dma0.source.data[ 0:16]),
-                    self.tx0_q.eq(self.pcie_dma0.source.data[16:32]),
-                    self.tx1_i.eq(self.pcie_dma0.source.data[32:48]),
-                    self.tx1_q.eq(self.pcie_dma0.source.data[48:64]),
-                )
-            ]
-        elif not with_rxtx_loop:
-            self.comb += self.pcie_dma0.source.connect(self.lms7002m.sink)
-
-        if with_rxtx_loop:
-            self.comb += self.pcie_dma0.source.connect(self.pcie_dma0.sink)
-        elif with_rx_pattern:
-            class MYTXPatternGenerator(LiteXModule): # FIXME: Integrate Pattern properly or remove.
-                def __init__(self):
-                    self.source  = stream.Endpoint([("data", 32)])
-
-                    # # #
-
-                    # Control-Path.
-                    # -------------
-                    self.comb += self.source.valid.eq(1)
-                    self.sync += self.source.last.eq(0)
-
-                    # Generator.
-                    # ----------
-
-                    # Counter.
-                    count = Signal(12)
-                    self.sync += [
-                        count.eq(count + 1),
-                    ]
-
-                    # Data-Path.
-                    # ----------
-                    self.sync += [
-                        self.source.data.eq(0),
-                        self.source.data[ 0:12].eq(count[ 0:11]), # FIXME: sign extension
-                        self.source.data[16:28].eq(count[ 0:11]), # FIXME: sign extension
-                    ]
-            test_tx_pat = MYTXPatternGenerator()
-            self.test_tx_pat = test_tx_pat
-            self.rx_conv    = rx_conv    = stream.Converter(32, 64)
-            self.comb += self.test_tx_pat.source.connect(self.rx_conv.sink, omit={"data"})
-            self.comb += self.rx_conv.sink.data.eq(self.test_tx_pat.source.data & 0x0fff0fff)
-            self.comb += self.rx_conv.source.connect(self.pcie_dma0.sink)
-        else:
-            self.comb += self.lms7002m.source.connect(self.pcie_dma0.sink, omit={"last"})
-
         platform.add_false_path_constraints(self.crg.cd_sys.clk, self.lms7002m.cd_rfic.clk)
-
-        # Analyzer ---------------------------------------------------------------------------------
-        if with_analyzer:
-            #analyzer_signals = [platform.lookup_request("lms7002m")]
-            analyzer_signals = [
-                #self.lms7002m.sink,
-                #self.lms7002m.source,
-                #self.lms7002m.tx_frame,
-                #self.lms7002m.tx_data,
-                #self.lms7002m.rx_frame,
-                #self.lms7002m.rx_aligned,
-                #self.lms7002m.rx_data,
-            ]
-
-            if with_rx_scope:
-                analyzer_signals += [
-                    #self.pcie_dma0.sink,
-                    self.pcie_dma0.writer.sink,
-                ]
-
-                if with_rx_pattern:
-                    analyzer_signals += [
-                        self.test_tx_pat.source
-                    ]
-
-            if with_rxtx_scope:
-                analyzer_signals += [
-                    self.pcie_dma0.reader.source,
-                ]
-            if with_tx_scope:
-                analyzer_signals += [
-                    #self.pcie_dma0.reader.source,
-                    self.pcie_dma0.source.data,
-                    self.pcie_dma0.source.ready,
-                    self.pcie_dma0.source.valid,
-                    self.pcie_dma0.source.last,
-                    self.pcie_dma0.source.first,
-                    self.tx0_i,
-                    self.tx0_q,
-                    self.tx1_i,
-                    self.tx1_q,
-                ]
-
-            self.analyzer = LiteScopeAnalyzer(analyzer_signals,
-                depth        = 128,
-                clock_domain = "sys",
-                register     = True,
-                csr_csv      = "analyzer.csv"
-            )
 
         # Timing Constraints/False Paths -----------------------------------------------------------
         for i in range(4):
@@ -367,15 +259,58 @@ class BaseSoC(SoCCore):
             platform.toolchain.pre_placement_commands.append(f"set_clock_groups -group [get_clocks {{{{*s7pciephy_clkout{i}}}}}] -group [get_clocks     vctcxo_clk] -asynchronous")
             platform.toolchain.pre_placement_commands.append(f"set_clock_groups -group [get_clocks {{{{*s7pciephy_clkout{i}}}}}] -group [get_clocks lms7002m_mclk1] -asynchronous")
 
+
+    def add_pcie_dma_probe(self):
+        # DMA TX.
+        tx_data = Record([("i0", 16), ("q0", 16), ("i1", 16), ("q1", 16)])
+        self.comb += [
+            tx_data.i0.eq(self.pcie_dma0.source.data[0*16:1*16]),
+            tx_data.q0.eq(self.pcie_dma0.source.data[1*16:2*16]),
+            tx_data.i1.eq(self.pcie_dma0.source.data[2*16:3*16]),
+            tx_data.q1.eq(self.pcie_dma0.source.data[3*16:4*16]),
+        ]
+
+        # DMA RX.
+        rx_data = Record([("i0", 16), ("q0", 16), ("i1", 16), ("q1", 16)])
+        self.comb += [
+            rx_data.i0.eq(self.pcie_dma0.sink.data[0*16:1*16]),
+            rx_data.q0.eq(self.pcie_dma0.sink.data[1*16:2*16]),
+            rx_data.i1.eq(self.pcie_dma0.sink.data[2*16:3*16]),
+            rx_data.q1.eq(self.pcie_dma0.sink.data[3*16:4*16]),
+        ]
+        analyzer_signals = [
+            # DMA TX.
+            self.pcie_dma0.source.valid,
+            self.pcie_dma0.source.ready,
+            self.pcie_dma0.source.first,
+            self.pcie_dma0.source.last,
+            tx_data,
+
+            # DMA RX.
+            self.pcie_dma0.sink.valid,
+            self.pcie_dma0.sink.ready,
+            self.pcie_dma0.sink.first,
+            self.pcie_dma0.sink.last,
+            rx_data,
+        ]
+        self.analyzer = LiteScopeAnalyzer(analyzer_signals,
+            depth        = 512,
+            clock_domain = "sys",
+            register     = True,
+            csr_csv      = "analyzer.csv"
+        )
+
 # Build --------------------------------------------------------------------------------------------
 
 def main():
     parser = argparse.ArgumentParser(description="LiteX SoC on Fairwaves/LimeSDR XTRX")
     parser.add_argument("--board",   default="fairwaves_pro", help="Select XTRX board.", choices=["fairwaves_cs", "fairwaves_pro", "limesdr"])
-    parser.add_argument("--build",   action="store_true", help="Build bitstream.")
-    parser.add_argument("--load",    action="store_true", help="Load bitstream.")
-    parser.add_argument("--flash",   action="store_true", help="Flash bitstream.")
-    parser.add_argument("--driver",  action="store_true", help="Generate PCIe driver from LitePCIe (override local version).")
+    parser.add_argument("--build",   action="store_true",     help="Build bitstream.")
+    parser.add_argument("--load",    action="store_true",     help="Load bitstream.")
+    parser.add_argument("--flash",   action="store_true",     help="Flash bitstream.")
+    parser.add_argument("--driver",  action="store_true",     help="Generate PCIe driver from LitePCIe (override local version).")
+    probeopts = parser.add_mutually_exclusive_group()
+    probeopts.add_argument("--with-pcie-dma-probe", action="store_true", help="Enable PCIe DMA LiteScope Probe.")
     args = parser.parse_args()
 
     # Build SoC.
@@ -386,6 +321,8 @@ def main():
             board        = args.board,
             cpu_firmware = None if prepare else "firmware/firmware.bin",
         )
+        if args.with_pcie_dma_probe:
+            soc.add_pcie_dma_probe()
         builder = Builder(soc, csr_csv="csr.csv")
         builder.build(run=build)
         if prepare:
