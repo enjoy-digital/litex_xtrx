@@ -354,7 +354,9 @@ class DLL_EXPORT SoapyLiteXXTRX : public SoapySDR::Device {
     bool LMS1_SetSampleRate(double f_Hz, uint8_t rxDecimation, uint8_t txInterpolation);
 
     int _fd;
+//#ifdef USE_OLD
     LMS7002M_t *_lms;
+//#endif
     std::shared_ptr<LMS_SPI> _lms_spi;
     lime::LMS7002M *_lms2;
     double _masterClockRate;

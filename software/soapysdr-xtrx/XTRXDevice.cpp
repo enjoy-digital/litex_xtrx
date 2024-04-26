@@ -125,7 +125,11 @@ void dma_set_loopback(int fd, bool loopback_enable) {
 //#define ENABLE_TEST_TONE
 
 SoapyLiteXXTRX::SoapyLiteXXTRX(const SoapySDR::Kwargs &args)
-    : _fd(-1), _lms(NULL), _masterClockRate(1.0e6), _refClockRate(26e6) {
+    : _fd(-1),
+//#ifdef USE_OLD
+	_lms(NULL),
+//#endif
+    _masterClockRate(1.0e6), _refClockRate(26e6) {
     LMS7_set_log_handler(&customLogHandler);
     LMS7_set_log_level(LMS7_TRACE);
     SoapySDR::logf(SOAPY_SDR_INFO, "SoapyLiteXXTRX initializing...");
@@ -181,17 +185,17 @@ SoapyLiteXXTRX::SoapyLiteXXTRX(const SoapySDR::Kwargs &args)
         throw std::runtime_error(
             "SoapyLiteXXTRX(): failed to LMS7002M_create()");
     }
-    /* hack */
 #ifdef USE_OLD
     LMS7002M_reset(_lms);
+    LMS7002M_set_spi_mode(_lms, 4);
 #else
     _lms_spi = std::make_shared<LMS_SPI>(_fd);
     _lms2 = new lime::LMS7002M(_lms_spi);
     _lms2->SetReferenceClk_SX(lime::TRXDir::Rx, _refClockRate);
     _lms2->SetClockFreq(lime::LMS7002M::ClockID::CLK_REFERENCE, _refClockRate);
     _lms2->SoftReset();
+    _lms2->Modify_SPI_Reg_bits(LMS7param(SPIMODE), 1); // 4 Wire SPI Mode
 #endif
-    LMS7002M_set_spi_mode(_lms, 4); // nothing equivalent
 
     // read info register
 #ifndef USE_OLD
@@ -292,6 +296,7 @@ SoapyLiteXXTRX::SoapyLiteXXTRX(const SoapySDR::Kwargs &args)
 
     // NOTE: if initialization misses a setting/register, try experimenting in
     //       LimeGUI and loading that register dump here
+#ifdef TODO
     if (args.count("ini") != 0) {
         if (LMS7002M_load_ini(_lms, args.at("ini").c_str())){
             SoapySDR::log(SOAPY_SDR_ERROR, "SoapyLiteXXTRX configuration load failed");
@@ -301,6 +306,7 @@ SoapyLiteXXTRX::SoapyLiteXXTRX(const SoapySDR::Kwargs &args)
 
         }
     }
+#endif
 
 #ifdef ENABLE_TEST_TONE
     writeSetting("RXTSP_ENABLE", "TRUE");
@@ -352,12 +358,12 @@ SoapyLiteXXTRX::~SoapyLiteXXTRX(void) {
     LMS7002M_trf_enable(_lms, LMS_CHAB, false);
     LMS7002M_sxx_enable(_lms, LMS_RX, false);
     LMS7002M_sxx_enable(_lms, LMS_TX, false);
-#endif
     /* FIXME: nothing equivalent */
     LMS7002M_xbuf_share_tx(_lms, false);
     LMS7002M_ldo_enable(_lms, false, LMS7002M_LDO_ALL);
     LMS7002M_power_down(_lms);
     LMS7002M_destroy(_lms);
+#endif
 
     delete _lms2;
     close(_fd);
@@ -1239,18 +1245,30 @@ std::vector<std::string> SoapyLiteXXTRX::listRegisterInterfaces(void) const {
 
 
 void SoapyLiteXXTRX::writeRegister(const unsigned addr, const unsigned value) {
+#ifdef USE_OLD
     LMS7002M_spi_write(_lms, addr, value);
+#else
+	_lms2->SPI_write(addr, value);
+#endif
 }
 
 unsigned SoapyLiteXXTRX::readRegister(const unsigned addr) const {
+#ifdef USE_OLD
     return LMS7002M_spi_read(_lms, addr);
+#else
+	return _lms2->SPI_read(addr);
+#endif
 }
 
 
 
 void SoapyLiteXXTRX::writeRegister(const std::string &name, const unsigned addr, const unsigned value) {
     if (name == "LMS7002M") {
+#ifdef USE_OLD
         LMS7002M_spi_write(_lms, addr, value);
+#else
+		_lms2->SPI_write(addr, value);
+#endif
     } else if (name == "LitePCI") {
         litepcie_writel(_fd, addr, value);
     } else
@@ -1259,13 +1277,16 @@ void SoapyLiteXXTRX::writeRegister(const std::string &name, const unsigned addr,
 
 unsigned SoapyLiteXXTRX::readRegister(const std::string &name, const unsigned addr) const {
     if (name == "LMS7002M") {
+#ifdef USE_OLD
         return LMS7002M_spi_read(_lms, addr);
+#else
+		return _lms2->SPI_read(addr);
+#endif
     } else if (name == "LitePCI") {
         return litepcie_readl(_fd, addr);
     } else
         throw std::runtime_error("SoapyLiteXXTRX::readRegister(" + name + ") unknown register");
 }
-
 
 
 /*******************************************************************
@@ -1319,6 +1340,7 @@ void SoapyLiteXXTRX::writeSetting(const std::string &key, const std::string &val
     std::lock_guard<std::mutex> lock(_mutex);
 
     // undo any changes caused by one of the other keys with these enable calls
+#ifdef TODO
     if (key == "RXTSP_ENABLE")
         LMS7002M_rxtsp_enable(_lms, LMS_CHAB, value == "TRUE");
     else if (key == "TXTSP_ENABLE")
@@ -1410,7 +1432,9 @@ void SoapyLiteXXTRX::writeSetting(const std::string &key, const std::string &val
         LMS7002M_trf_enable_loopback(_lms, LMS_CHAB, value == "TRUE");
     } else if (key == "RESET_RX_FIFO") {
         LMS7002M_reset_lml_fifo(_lms, LMS_RX);
-    } else if (key == "FPGA_TX_RX_LOOPBACK_ENABLE") {
+    } else 
+#endif
+	if (key == "FPGA_TX_RX_LOOPBACK_ENABLE") {
         SoapySDR::log(SOAPY_SDR_DEBUG, "Setting FPGA TX-RX Loopback");
         uint32_t control = litepcie_readl(_fd, CSR_LMS7002M_CONTROL_ADDR);
         control &= ~(1 << CSR_LMS7002M_CONTROL_TX_RX_LOOPBACK_ENABLE_OFFSET);
@@ -1468,6 +1492,7 @@ void SoapyLiteXXTRX::writeSetting(const std::string &key, const std::string &val
         uint32_t mask = ((uint32_t)(1 << CSR_LMS7002M_DELAY_RX_DELAY_SIZE)-1) << CSR_LMS7002M_DELAY_RX_DELAY_OFFSET;
         litepcie_writel(_fd, CSR_LMS7002M_DELAY_ADDR,
                         (reg & ~mask) | (delay << CSR_LMS7002M_DELAY_RX_DELAY_OFFSET));
+#ifdef TODO
     } else if (key == "DUMP_INI") {
         LMS7002M_dump_ini(_lms, value.c_str());
     } else if (key == "RXTSP_TONE") {
@@ -1478,6 +1503,7 @@ void SoapyLiteXXTRX::writeSetting(const std::string &key, const std::string &val
         LMS7002M_rxtsp_enable(_lms, LMS_CHAB, value == "TRUE");
     } else if (key == "TXTSP_ENABLE") {
         LMS7002M_txtsp_enable(_lms, LMS_CHAB, value == "TRUE");
+#endif
     } else
         throw std::runtime_error("SoapyLiteXXTRX::writeSetting(" + key + ", " +
                                  value + ") unknown key");
