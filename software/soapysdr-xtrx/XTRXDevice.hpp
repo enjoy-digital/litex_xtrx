@@ -146,7 +146,6 @@ class DLL_EXPORT SoapyLiteXXTRX : public SoapySDR::Device {
     // Sample Rate API
     void setSampleRate(const int direction, const size_t,
                        const double rate) override;
-	bool LMS1_SetSampleRate(double f_Hz, uint8_t rxDecimation, uint8_t txInterpolation);
     double getSampleRate(const int direction, const size_t) const override;
     std::vector<double> listSampleRates(const int direction,
                                         const size_t) const override;
@@ -349,6 +348,9 @@ class DLL_EXPORT SoapyLiteXXTRX : public SoapySDR::Device {
     const char *dir2Str(const int direction) const {
         return (direction == SOAPY_SDR_RX) ? "RX" : "TX";
     }
+
+	/* sampling rate */
+	bool LMS1_SetSampleRate(double f_Hz, uint8_t rxDecimation, uint8_t txInterpolation);
 
     int _fd;
     LMS7002M_t *_lms;

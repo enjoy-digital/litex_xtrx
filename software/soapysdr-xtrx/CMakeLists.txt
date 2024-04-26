@@ -83,7 +83,7 @@ find_package(SoapySDR "0.2.1" REQUIRED)
 
 SOAPY_SDR_MODULE_UTIL(
     TARGET SoapyLiteXXTRX
-	SOURCES XTRXDevice.cpp Streaming.cpp Registration.cpp
+	SOURCES XTRXDevice.cpp Streaming.cpp Registration.cpp XTRXUtils.cpp
 	LIBRARIES ${LITEPCIE_LIBRARY} ${LMS7002M_LIBRARY} ${LMS7002MNG_LIBRARY} m
 )
 
