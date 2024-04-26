@@ -1,14 +1,15 @@
 #
 # This file is part of LimeSDR-XTRX_LiteX_GW.
 #
-# Copyright (c) 2021 Florent Kermarrec <florent@enjoy-digital.fr>
+# Copyright (c) 2021-2024 Florent Kermarrec <florent@enjoy-digital.fr>
+# Copyright (c) 2024 Gwenhael Goavec-Merou <gwenhael@enjoy-digital.fr>
 # SPDX-License-Identifier: BSD-2-Clause
 
 # https://www.crowdsupply.com/lime-micro/limesdr-xtrx
 
 from litex.build.generic_platform import *
 from litex.build.xilinx import Xilinx7SeriesPlatform
-from litex.build.openocd import OpenOCD
+from litex.build.openfpgaloader import OpenFPGALoader
 
 # IOs ----------------------------------------------------------------------------------------------
 
@@ -93,7 +94,7 @@ _io = [
 
     # GPS.
     ("gps", 0,
-        Subsignal("rst", Pins("U18"), IOStandard("LVCMOS33")), # enable>>
+        Subsignal("rst", Pins("U18"), IOStandard("LVCMOS33")),
         Subsignal("pps", Pins("P3"),  Misc("PULLDOWN=True")),
         Subsignal("tx" , Pins("N2"),  Misc("PULLUP=True")),
         Subsignal("rx" , Pins("L1"),  Misc("PULLUP=True")),
@@ -115,10 +116,8 @@ _io = [
 
     # AUX.
     ("aux", 0,
-        #Subsignal("iovcc_sel",  Pins("V19")), # not found
-        Subsignal("en_smsigio", Pins("D17")), # ok
-        #Subsignal("option",     Pins("V14")), # not found
-        Subsignal("gpio13",     Pins("T17")), # ok
+        Subsignal("en_smsigio", Pins("D17")),
+        Subsignal("gpio13",     Pins("T17")),
         IOStandard("LVCMOS33")
     ),
 
@@ -133,7 +132,7 @@ _io = [
     ("lms7002m", 0,
         # Control.
         Subsignal("rst_n",    Pins("U19")),
-        Subsignal("pwrdwn_n", Pins("W17")), # LMS_CORE_LDO_EN
+        Subsignal("pwrdwn_n", Pins("W17")),
         Subsignal("rxen",     Pins("W18")),
         Subsignal("txen",     Pins("W19")),
 
@@ -174,10 +173,10 @@ _io = [
 
     # GPIO Serial.
     ("gpio_serial", 0,
-     Subsignal("tx", Pins("H2")),
-     Subsignal("rx", Pins("J2")),
-     IOStandard("LVCMOS33"))
-
+        Subsignal("tx", Pins("H2")),
+        Subsignal("rx", Pins("J2")),
+        IOStandard("LVCMOS33")
+    )
 ]
 
 # Platform -----------------------------------------------------------------------------------------
@@ -185,21 +184,8 @@ _io = [
 class Platform(Xilinx7SeriesPlatform):
     default_clk_name   = "clk26"
     default_clk_period = 1e9/26e6
-    dev_short_string = ""
 
-    def __init__(self, variant="xc7a50t", toolchain="vivado"):
-        assert variant in ["xc7a35t", "xc7a50t"]
-        self.variant = variant
-        device = {
-            "xc7a35t" : "xc7a35tcpg236-3",
-            "xc7a50t" : "xc7a50tcpg236-2",
-        }[variant]
-
-        if variant == "xc7a50t":
-            self.dev_short_string = "a50t"
-        else:
-            self.dev_short_string = "a35t"
-
+    def __init__(self, toolchain="vivado"):
         Xilinx7SeriesPlatform.__init__(self, "xc7a50tcpg236-2", _io, toolchain=toolchain)
 
         self.toolchain.bitstream_commands = [
@@ -209,9 +195,6 @@ class Platform(Xilinx7SeriesPlatform):
             "set_property BITSTREAM.CONFIG.CONFIGRATE 66 [current_design]",
             "set_property BITSTREAM.GENERAL.COMPRESS TRUE [current_design]",
             "set_property BITSTREAM.CONFIG.SPI_FALL_EDGE YES [current_design]",
-            #"set_property BITSTREAM.config.SPI_opcode 0x6B [current_design ]",
-
-            # Xilinx tools ask for this
             "set_property CFGBVS VCCO [current_design]",
             "set_property CONFIG_VOLTAGE 3.3 [current_design]",
         ]
@@ -232,7 +215,7 @@ class Platform(Xilinx7SeriesPlatform):
         ]
 
     def create_programmer(self):
-        return OpenOCD("openocd_xc7_ft2232.cfg", "bscan_spi_xc7"+self.dev_short_string+".bit")
+        return OpenFPGALoader(cable="digilent_hs2", fpga_part=f"xc7a50tcpg236", freq=10e6)
 
     def do_finalize(self, fragment):
         Xilinx7SeriesPlatform.do_finalize(self, fragment)
