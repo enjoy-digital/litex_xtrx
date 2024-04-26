@@ -148,7 +148,7 @@ class DLL_EXPORT SoapyLiteXXTRX : public SoapySDR::Device {
     void setSampleRate(const int direction, const size_t,
                        const double rate) override;
     double getSampleRate(const int direction, const size_t) const override;
-    std::vector<double> listSampleRates(const int direction,
+    SoapySDR::RangeList getSampleRateRange(const int direction,
                                         const size_t) const override;
 
     std::map<int, double> _cachedSampleRates;

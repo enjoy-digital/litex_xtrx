@@ -127,7 +127,7 @@ void dma_set_loopback(int fd, bool loopback_enable) {
 SoapyLiteXXTRX::SoapyLiteXXTRX(const SoapySDR::Kwargs &args)
     : _fd(-1),
 //#ifdef USE_OLD
-	_lms(NULL),
+    _lms(NULL),
 //#endif
     _masterClockRate(1.0e6), _refClockRate(26e6) {
     LMS7_set_log_handler(&customLogHandler);
@@ -920,16 +920,9 @@ double SoapyLiteXXTRX::getSampleRate(const int direction, const size_t) const {
     return _cachedSampleRates.at(direction);
 }
 
-std::vector<double> SoapyLiteXXTRX::listSampleRates(const int direction,
+SoapySDR::RangeList SoapyLiteXXTRX::getSampleRateRange(const int ,
                                                const size_t) const {
-    // FIXME: / 1000 fix round maybe of something related to magnitude
-    const double baseRate = this->getTSPRate(direction)/1000;
-    std::vector<double> rates;
-    // from baseRate/32 to baseRate/2
-    for (int i = 5; i >= 1; i--) {
-        rates.push_back(1000*round(baseRate / (1 << i)));
-    }
-    return rates;
+    return {SoapySDR::Range(100e3, 61.44e6, 0)};
 }
 
 std::vector<std::string> SoapyLiteXXTRX::getStreamFormats(const int /*direction*/,
@@ -1248,7 +1241,7 @@ void SoapyLiteXXTRX::writeRegister(const unsigned addr, const unsigned value) {
 #ifdef USE_OLD
     LMS7002M_spi_write(_lms, addr, value);
 #else
-	_lms2->SPI_write(addr, value);
+    _lms2->SPI_write(addr, value);
 #endif
 }
 
@@ -1256,7 +1249,7 @@ unsigned SoapyLiteXXTRX::readRegister(const unsigned addr) const {
 #ifdef USE_OLD
     return LMS7002M_spi_read(_lms, addr);
 #else
-	return _lms2->SPI_read(addr);
+    return _lms2->SPI_read(addr);
 #endif
 }
 
@@ -1267,7 +1260,7 @@ void SoapyLiteXXTRX::writeRegister(const std::string &name, const unsigned addr,
 #ifdef USE_OLD
         LMS7002M_spi_write(_lms, addr, value);
 #else
-		_lms2->SPI_write(addr, value);
+        _lms2->SPI_write(addr, value);
 #endif
     } else if (name == "LitePCI") {
         litepcie_writel(_fd, addr, value);
@@ -1280,7 +1273,7 @@ unsigned SoapyLiteXXTRX::readRegister(const std::string &name, const unsigned ad
 #ifdef USE_OLD
         return LMS7002M_spi_read(_lms, addr);
 #else
-		return _lms2->SPI_read(addr);
+        return _lms2->SPI_read(addr);
 #endif
     } else if (name == "LitePCI") {
         return litepcie_readl(_fd, addr);
@@ -1434,7 +1427,7 @@ void SoapyLiteXXTRX::writeSetting(const std::string &key, const std::string &val
         LMS7002M_reset_lml_fifo(_lms, LMS_RX);
     } else 
 #endif
-	if (key == "FPGA_TX_RX_LOOPBACK_ENABLE") {
+    if (key == "FPGA_TX_RX_LOOPBACK_ENABLE") {
         SoapySDR::log(SOAPY_SDR_DEBUG, "Setting FPGA TX-RX Loopback");
         uint32_t control = litepcie_readl(_fd, CSR_LMS7002M_CONTROL_ADDR);
         control &= ~(1 << CSR_LMS7002M_CONTROL_TX_RX_LOOPBACK_ENABLE_OFFSET);
