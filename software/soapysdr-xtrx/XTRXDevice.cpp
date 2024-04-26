@@ -600,19 +600,13 @@ void SoapyLiteXXTRX::setIQBalance(const int direction, const size_t channel,
                                          std::arg(balance), std::abs(balance));
     }
 #else
-    if (direction == SOAPY_SDR_TX) {
-        txtsp_set_iq_correction(channel,
-                                         std::arg(balance), std::abs(balance));
-    } else {
-        rxtsp_set_iq_correction(channel,
-                                         std::arg(balance), std::abs(balance));
-	}
+    set_iq_correction(direction, channel, std::arg(balance), std::abs(balance));
 #endif
 #endif
     _cachedIqBalValues[direction][channel] = balance;
 }
 
-void SoapyLiteXXTRX::rxtsp_set_iq_correction(
+void SoapyLiteXXTRX::set_iq_correction(const int direction,
     const size_t channel,
     const double phase,
     const double gain)
@@ -621,38 +615,20 @@ void SoapyLiteXXTRX::rxtsp_set_iq_correction(
 
     const bool bypassPhase = (phase == 0.0);
     const bool bypassGain = (gain == 1.0) || (gain == 0.0);
-	_lms2->Modify_SPI_Reg_bits(LMS7param(PH_BYP_RXTSP), bypassPhase ? 1 : 0);
-	_lms2->Modify_SPI_Reg_bits(LMS7param(GC_BYP_RXTSP), bypassGain ? 1 : 0);
 
-	_lms2->Modify_SPI_Reg_bits(LMS7param(IQCORR_RXTSP), 2047*(phase/(M_PI/2)));
-	_lms2->Modify_SPI_Reg_bits(LMS7param(GCORRI_RXTSP), 2047);
-	_lms2->Modify_SPI_Reg_bits(LMS7param(GCORRQ_RXTSP), 2047);
-    if (gain > 1.0)
-		_lms2->Modify_SPI_Reg_bits(LMS7param(GCORRQ_RXTSP), ((1.0/gain)*2047));
+    const int gcorrq = (gain > 1.0) ? ((1.0/gain)*2047) : 2047;
+    const int gcorri = (gain < 1.0) ? ((gain/1.0)*2047) : 2047;
 
-    if (gain < 1.0)
-		_lms2->Modify_SPI_Reg_bits(LMS7param(GCORRI_RXTSP), ((gain/1.0)*2047));
-}
-
-void SoapyLiteXXTRX::txtsp_set_iq_correction(
-    const size_t channel,
-    const double phase,
-    const double gain)
-{
-    _lms2->Modify_SPI_Reg_bits(LMS7param(MAC), (channel % 2) + 1);
-
-    const bool bypassPhase = (phase == 0.0);
-    const bool bypassGain = (gain == 1.0) || (gain == 0.0);
-	_lms2->Modify_SPI_Reg_bits(LMS7param(PH_BYP_TXTSP), bypassPhase ? 1 : 0);
-	_lms2->Modify_SPI_Reg_bits(LMS7param(GC_BYP_TXTSP), bypassGain ? 1 : 0);
-
-	_lms2->Modify_SPI_Reg_bits(LMS7param(IQCORR_TXTSP), 2047*(phase/(M_PI/2)));
-	_lms2->Modify_SPI_Reg_bits(LMS7param(GCORRI_TXTSP), 2047);
-	_lms2->Modify_SPI_Reg_bits(LMS7param(GCORRQ_TXTSP), 2047);
-    if (gain > 1.0)
-		_lms2->Modify_SPI_Reg_bits(LMS7param(GCORRQ_TXTSP), ((1.0/gain)*2047));
-    if (gain < 1.0)
-		_lms2->Modify_SPI_Reg_bits(LMS7param(GCORRI_TXTSP), ((gain/1.0)*2047));
+    _lms2->Modify_SPI_Reg_bits((direction == SOAPY_SDR_TX) ? LMS7param(PH_BYP_TXTSP) : LMS7param(PH_BYP_RXTSP),
+        bypassPhase ? 1 : 0);
+    _lms2->Modify_SPI_Reg_bits((direction == SOAPY_SDR_TX) ? LMS7param(GC_BYP_TXTSP) : LMS7param(GC_BYP_RXTSP),
+        bypassGain ? 1 : 0);
+    _lms2->Modify_SPI_Reg_bits((direction == SOAPY_SDR_TX) ? LMS7param(IQCORR_TXTSP) : LMS7param(IQCORR_RXTSP),
+        2047*(phase/(M_PI/2)));
+    _lms2->Modify_SPI_Reg_bits((direction == SOAPY_SDR_TX) ? LMS7param(GCORRI_TXTSP) : LMS7param(GCORRI_RXTSP),
+        gcorri);
+    _lms2->Modify_SPI_Reg_bits((direction == SOAPY_SDR_TX) ? LMS7param(GCORRQ_TXTSP) : LMS7param(GCORRQ_RXTSP),
+        gcorrq);
 }
 
 std::complex<double> SoapyLiteXXTRX::getIQBalance(const int direction,
