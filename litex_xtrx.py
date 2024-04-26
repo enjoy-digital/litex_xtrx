@@ -18,7 +18,7 @@ from migen.genlib.cdc    import MultiReg
 from litex.gen import *
 
 from litex_boards.platforms import fairwaves_xtrx
-from limesdr_xtrx import Platform as limesdr_xtrx
+from litex_boards.platforms import limesdr_xtrx
 
 from litex.soc.interconnect.csr import *
 from litex.soc.interconnect import stream
@@ -139,7 +139,7 @@ class BaseSoC(SoCCore):
         if version == "fairwaves":
             platform = fairwaves_xtrx.Platform(variant=variant)
         else:
-            platform = limesdr_xtrx()
+            platform = limesdr_xtrx.Platform()
 
         # Git SHA/Dirty. CHECKME: See if useful.
         git_sha = subprocess.check_output(['git', 'rev-parse', '--short', 'HEAD']).strip().decode('utf-8')
