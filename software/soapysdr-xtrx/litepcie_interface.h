@@ -28,12 +28,12 @@ static inline uint32_t litepcie_interface_transact(void *handle, const uint32_t 
     if (readback) {
         uint32_t ret = litepcie_readl(*fd, CSR_LMS7002M_SPI_MISO_ADDR) & 0xffff;
 #ifdef DBG_TRANSACTION
-		printf("%s write read addr: 0x%04x -> %08x\n", __func__, 0x7fff & (data_in >> 16), ret);
+		printf("%s read  addr: 0x%04x -> %08x\n", __func__, 0x7fff & (data_in >> 16), ret);
 #endif
 		return ret;
     } else {
 #ifdef DBG_TRANSACTION
-		printf("%s write only addr: 0x%04x value: 0x%04x\n", __func__,
+		printf("%s write addr: 0x%04x value: 0x%04x\n", __func__,
 			0x7fff & (data_in >> 16), data_in & 0xffff);
 #endif
         return 0;
