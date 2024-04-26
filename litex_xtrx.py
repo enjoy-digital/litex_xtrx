@@ -9,7 +9,6 @@
 import os
 import sys
 import argparse
-import subprocess
 
 from migen import *
 from migen.fhdl.specials import Tristate
@@ -143,10 +142,6 @@ class BaseSoC(SoCCore):
             "lime"     : limesdr_xtrx.Platform()
         }[version]
 
-        # Git SHA/Dirty. CHECKME: See if useful.
-        git_sha = subprocess.check_output(['git', 'rev-parse', '--short', 'HEAD']).strip().decode('utf-8')
-        git_dirty = "-dirty" if len(subprocess.check_output(['git', 'diff'])) != 0 else ""
-
         # Configuration: See if useful in longterm and integrate properly.
         with_rx_pattern = False
         with_tx_test    = False
@@ -159,7 +154,7 @@ class BaseSoC(SoCCore):
 
         # SoCCore ----------------------------------------------------------------------------------
         SoCCore.__init__(self, platform, sys_clk_freq,
-            ident                    = "LiteX SoC on Fairwaves XTRX "+git_sha+git_dirty,
+            ident                    = f"LiteX SoC on {version.capitalize()} XTRX ",
             ident_version            = True,
             cpu_type                 = "vexriscv" if with_cpu else None,
             cpu_variant              = "minimal",
