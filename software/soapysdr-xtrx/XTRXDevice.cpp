@@ -1494,6 +1494,40 @@ void SoapyLiteXXTRX::writeSetting(const std::string &key, const std::string &val
                                  value + ") unknown key");
 }
 
+#ifdef FORNEXT
+bool SoapyLiteXXTRX::tsg_tone(const int direction, const size_t channel, const bool enable,
+        const bool fullscale, const bool div4, const bool dcMode)
+{
+    const ChannelConfig& ch = config;
+    _lms2->Modify_SPI_Reg_bits((direction == SOAPY_SDR_RX) ? LMS7_INSEL_RXTSP : LMS7_INSEL_TXTSP,
+        enable ? 1 : 0);
+    if (!enable)
+        return true;
+
+    switch (direction) {
+        case SOAPY_SDR_RX:
+            //const ChannelConfig::Direction::TestSignal& signal = ch.rx.testSignal;
+            _lms2->Modify_SPI_Reg_bits(LMS7_TSGFC_RXTSP, fullscale ? 1 : 0);
+            _lms2->Modify_SPI_Reg_bits(LMS7_TSGFCW_RXTSP, div4 ? 2 : 1);
+            _lms2->Modify_SPI_Reg_bits(LMS7_TSGMODE_RXTSP, dcMode ? 1 : 0);
+            _lms2->SPI_write(0x040C, 0x01FF); // DC.. bypasss
+            // LMS7_TSGMODE_RXTSP change resets DC values
+            return chip->LoadDC_REG_IQ(TRXDir::Rx, signal.dcValue.real(), signal.dcValue.imag());
+            break;
+        case SOAPY_SDR_RX:
+            //const ChannelConfig::Direction::TestSignal& signal = ch.tx.testSignal;
+            _lms2->Modify_SPI_Reg_bits(LMS7_TSGFC_TXTSP, fullscale ? 1 : 0);
+            _lms2->Modify_SPI_Reg_bits(LMS7_TSGFCW_TXTSP, div4 ? 2 : 1);
+            _lms2->Modify_SPI_Reg_bits(LMS7_TSGMODE_TXTSP, signal.dcMode ? 1 : 0);
+            _lms2->SPI_write(0x040C, 0x01FF); // DC.. bypasss
+            // LMS7_TSGMODE_TXTSP change resets DC values
+            return chip->LoadDC_REG_IQ(TRXDir::Tx, signal.dcValue.real(), signal.dcValue.imag());
+        break;
+    }
+    return OpStatus::Success;
+
+}
+#endif
 
 /***********************************************************************
  * Find available devices
