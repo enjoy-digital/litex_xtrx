@@ -87,16 +87,6 @@ make
 sudo litex_term /dev/ttyLXU0 --kernel=firmware.bin --safe
 ```
 
-#### [> Install LMS7002M Driver
-```bash
-cd software/LMS7002M-driver
-mkdir build
-cd build
-cmake ../
-make
-sudo make install
-```
-
 #### [> Install LMS7002MNG Driver (extracted from LimeSuiteNG)
 ```bash
 cd software/lms7002mNG
