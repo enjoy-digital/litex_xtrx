@@ -19,7 +19,6 @@
 #include <iostream>
 #include <memory>
 
-#include <LMS7002M/LMS7002M.h>
 #include "liblitepcie.h"
 #include <lms7002mNG/OpStatus.h>
 #include <lms7002mNG/LMS7002M.h>
@@ -341,13 +340,13 @@ class DLL_EXPORT SoapyLiteXXTRX : public SoapySDR::Device {
     RXStream _rx_stream;
     TXStream _tx_stream;
 
-    LMS7002M_dir_t dir2LMS(const int direction) const {
+    /*LMS7002M_dir_t dir2LMS(const int direction) const {
         return (direction == SOAPY_SDR_RX) ? LMS_RX : LMS_TX;
-    }
+    }*/
 
-    LMS7002M_chan_t ch2LMS(const size_t channel) const {
+    /*LMS7002M_chan_t ch2LMS(const size_t channel) const {
         return (channel == 0) ? LMS_CHA : LMS_CHB;
-    }
+    }*/
 
     const char *dir2Str(const int direction) const {
         return (direction == SOAPY_SDR_RX) ? "RX" : "TX";
@@ -357,9 +356,6 @@ class DLL_EXPORT SoapyLiteXXTRX : public SoapySDR::Device {
     bool LMS1_SetSampleRate(double f_Hz, uint8_t rxDecimation, uint8_t txInterpolation);
 
     int _fd;
-//#ifdef USE_OLD
-    LMS7002M_t *_lms;
-//#endif
     std::shared_ptr<LMS_SPI> _lms_spi;
     lime::LMS7002M *_lms2;
     double _masterClockRate;

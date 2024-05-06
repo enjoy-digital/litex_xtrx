@@ -1,5 +1,11 @@
+#define TODO
+
+#ifndef TODO
 #include <LMS7002M/LMS7002M.h>
 #include <LMS7002M/LMS7002M_logger.h>
+#endif
+
+#include <stdbool.h>
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -18,6 +24,10 @@ void sig_handler(int s)
 
 int main(int argc, char **argv)
 {
+#ifdef TODO
+	(void)argc;
+	(void)argv;
+#else
     LMS7_set_log_level(LMS7_DEBUG);
 
     printf("=========================================================\n");
@@ -81,5 +91,6 @@ int main(int argc, char **argv)
     close(fd);
 
     printf("Done!\n");
+#endif
     return EXIT_SUCCESS;
 }

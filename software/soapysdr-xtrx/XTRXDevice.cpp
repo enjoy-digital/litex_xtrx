@@ -19,11 +19,15 @@
 //   `litex_test record /dev/null 1024`, even when that hangs, fixes that.
 //   what are we not properly initializing?
 
+#define USE_NG
+#undef USE_NG
+//#define USE_NG2
+//#define USE_OLD
+
 #include "XTRXDevice.hpp"
 #include "litepcie_interface.h"
 #include <SoapySDR/Registry.hpp>
 #include <SoapySDR/Logger.hpp>
-#include <LMS7002M/LMS7002M_logger.h>
 #include <fstream>
 #include <memory>
 #include <sys/mman.h>
@@ -31,11 +35,6 @@
 #include <lms7002mNG/IComms.h>
 #include <lms7002mNG/OpStatus.h>
 #include <lms7002mNG/LMS7002M_parameters.h>
-
-#define USE_NG
-#undef USE_NG
-//#define USE_NG2
-//#define USE_OLD
 
 /* Default configuration
  * mainly for TX->PORT2 & RX->PORT1
@@ -94,19 +93,6 @@ class DLL_EXPORT LMS_SPI: public lime::ISPI {
         int _fd;
 };
 
-void customLogHandler(const LMS7_log_level_t level, const char *message) {
-    switch (level) {
-    case LMS7_FATAL:    SoapySDR::log(SOAPY_SDR_FATAL, message);    break;
-    case LMS7_CRITICAL: SoapySDR::log(SOAPY_SDR_CRITICAL, message); break;
-    case LMS7_ERROR:    SoapySDR::log(SOAPY_SDR_ERROR, message);    break;
-    case LMS7_WARNING:  SoapySDR::log(SOAPY_SDR_WARNING, message);  break;
-    case LMS7_NOTICE:   SoapySDR::log(SOAPY_SDR_NOTICE, message);   break;
-    case LMS7_INFO:     SoapySDR::log(SOAPY_SDR_INFO, message);     break;
-    case LMS7_DEBUG:    SoapySDR::log(SOAPY_SDR_DEBUG, message);    break;
-    case LMS7_TRACE:    SoapySDR::log(SOAPY_SDR_TRACE, message);    break;
-    }
-}
-
 // Forward declaration for usage in constructor.
 std::string getXTRXSerial(int fd);
 
@@ -125,12 +111,9 @@ void dma_set_loopback(int fd, bool loopback_enable) {
 
 SoapyLiteXXTRX::SoapyLiteXXTRX(const SoapySDR::Kwargs &args)
     : _fd(-1),
-//#ifdef USE_OLD
-    _lms(NULL),
-//#endif
     _masterClockRate(1.0e6), _refClockRate(26e6) {
-    LMS7_set_log_handler(&customLogHandler);
-    LMS7_set_log_level(LMS7_TRACE);
+    //LMS7_set_log_handler(&customLogHandler);
+    //LMS7_set_log_level(LMS7_TRACE);
     SoapySDR::logf(SOAPY_SDR_INFO, "SoapyLiteXXTRX initializing...");
     setvbuf(stdout, NULL, _IOLBF, 0);
 
@@ -179,78 +162,30 @@ SoapyLiteXXTRX::SoapyLiteXXTRX(const SoapySDR::Kwargs &args)
     writeSetting("FPGA_TX_DELAY", "16");
 
     // setup LMS7002M
-    _lms = LMS7002M_create(litepcie_interface_transact, &_fd);
-    if (_lms == NULL) {
-        throw std::runtime_error(
-            "SoapyLiteXXTRX(): failed to LMS7002M_create()");
-    }
-#ifdef USE_OLD
-    LMS7002M_reset(_lms);
-    LMS7002M_set_spi_mode(_lms, 4);
-#else
     _lms_spi = std::make_shared<LMS_SPI>(_fd);
     _lms2 = new lime::LMS7002M(_lms_spi);
     _lms2->SetReferenceClk_SX(lime::TRXDir::Rx, _refClockRate);
     _lms2->SetClockFreq(lime::LMS7002M::ClockID::CLK_REFERENCE, _refClockRate);
     _lms2->SoftReset();
     _lms2->Modify_SPI_Reg_bits(LMS7param(SPIMODE), 1); // 4 Wire SPI Mode
-#endif
 
     // read info register
-#ifndef USE_OLD
     uint16_t ver = _lms2->Get_SPI_Reg_bits(LMS7param(VER));
     uint16_t rev = _lms2->Get_SPI_Reg_bits(LMS7param(REV));
-#else
-    LMS7002M_regs_spi_read(_lms, 0x002f);
-    uint16_t ver = LMS7002M_regs(_lms)->reg_0x002f_ver;
-    uint16_t rev = LMS7002M_regs(_lms)->reg_0x002f_rev;
-#endif
     SoapySDR::logf(SOAPY_SDR_INFO, "LMS7002M info: revision %d, version %d", rev, ver);
 
     // set clock to Internal Reference Clock
     this->setClockSource("internal");
 
     // configure data port directions and data clock rates
-#ifdef USE_OLD
-    LMS7002M_configure_lml_port(_lms, LMS_PORT2, LMS_TX, 1);
-    LMS7002M_configure_lml_port(_lms, LMS_PORT1, LMS_RX, 1);
-#else
     for (auto &p: xtrx_default_cfg)
         _lms2->SPI_write(p.first, p.second);
-#endif
 
     // enable components
-#ifndef USE_OLD
     _lms2->EnableChannel(lime::TRXDir::Tx, 0, true);  // LMS_CHA
     _lms2->EnableChannel(lime::TRXDir::Tx, 1, true);  // LMS_CHB
     _lms2->EnableChannel(lime::TRXDir::Rx, 0, true);  // LMS_CHA
     _lms2->EnableChannel(lime::TRXDir::Rx, 1, true);  // LMS_CHB
-#else
-    LMS7002M_afe_enable(_lms, LMS_TX, LMS_CHA, true);
-    LMS7002M_afe_enable(_lms, LMS_TX, LMS_CHB, true);
-    LMS7002M_afe_enable(_lms, LMS_RX, LMS_CHA, true);
-    LMS7002M_afe_enable(_lms, LMS_RX, LMS_CHB, true);
-    LMS7002M_rxtsp_enable(_lms, LMS_CHA, true);
-    LMS7002M_rxtsp_enable(_lms, LMS_CHB, true);
-    LMS7002M_txtsp_enable(_lms, LMS_CHA, true);
-    LMS7002M_txtsp_enable(_lms, LMS_CHB, true);
-    LMS7002M_rbb_enable(_lms, LMS_CHA, true);
-    LMS7002M_rbb_enable(_lms, LMS_CHB, true);
-    LMS7002M_tbb_enable(_lms, LMS_CHA, true);
-    LMS7002M_tbb_enable(_lms, LMS_CHB, true);
-    LMS7002M_rfe_enable(_lms, LMS_CHA, true);
-    LMS7002M_rfe_enable(_lms, LMS_CHB, true);
-    LMS7002M_trf_enable(_lms, LMS_CHA, true);
-    LMS7002M_trf_enable(_lms, LMS_CHB, true);
-    LMS7002M_sxx_enable(_lms, LMS_RX, true);
-    LMS7002M_sxx_enable(_lms, LMS_TX, true);
-#endif
-
-    // XTRX-specific configuration
-#ifdef USE_OLD
-    LMS7002M_ldo_enable(_lms, true, LMS7002M_LDO_ALL);
-    LMS7002M_xbuf_share_tx(_lms, true);
-#endif
 
     // turn the clocks on (tested frequencies: 61.44MHZ, 122.88MHZ)
     //this->setMasterClockRate(122.88e6);
@@ -335,34 +270,10 @@ SoapyLiteXXTRX::~SoapyLiteXXTRX(void) {
     // power down and clean up
     // NOTE: disable if you want to inspect the configuration (e.g. in LimeGUI)
     //       or to validate the settings (e.g. using xtrx_litepcie_test)
-#ifndef USE_OLD
     _lms2->EnableChannel(lime::TRXDir::Tx, 0, false);  // LMS_CHA
     _lms2->EnableChannel(lime::TRXDir::Tx, 1, false);  // LMS_CHB
     _lms2->EnableChannel(lime::TRXDir::Rx, 0, false);  // LMS_CHA
     _lms2->EnableChannel(lime::TRXDir::Rx, 1, false);  // LMS_CHB
-    // LMS7002M_rxtsp_enable/LMS7002M_txtsp_enable
-    // LMS7002M_rbb_enable/LMS7002M_tbb_enable
-    // are partially covered by EnableChannel
-    //
-#else
-    LMS7002M_afe_enable(_lms, LMS_TX, LMS_CHA, false);
-    LMS7002M_afe_enable(_lms, LMS_TX, LMS_CHB, false);
-    LMS7002M_afe_enable(_lms, LMS_RX, LMS_CHA, false);
-    LMS7002M_afe_enable(_lms, LMS_RX, LMS_CHB, false);
-    LMS7002M_rxtsp_enable(_lms, LMS_CHAB, false);
-    LMS7002M_txtsp_enable(_lms, LMS_CHAB, false);
-    LMS7002M_rbb_enable(_lms, LMS_CHAB, false);
-    LMS7002M_tbb_enable(_lms, LMS_CHAB, false);
-    LMS7002M_rfe_enable(_lms, LMS_CHAB, false);
-    LMS7002M_trf_enable(_lms, LMS_CHAB, false);
-    LMS7002M_sxx_enable(_lms, LMS_RX, false);
-    LMS7002M_sxx_enable(_lms, LMS_TX, false);
-    /* FIXME: nothing equivalent */
-    LMS7002M_xbuf_share_tx(_lms, false);
-    LMS7002M_ldo_enable(_lms, false, LMS7002M_LDO_ALL);
-    LMS7002M_power_down(_lms);
-    LMS7002M_destroy(_lms);
-#endif
 
     delete _lms2;
     close(_fd);
@@ -407,30 +318,17 @@ std::vector<std::string> SoapyLiteXXTRX::listAntennas(const int direction,
     return ants;
 }
 
-#ifndef USE_OLD
-#undef LMS7002M_RFE_NONE
-#undef LMS7002M_RFE_LNAH
-#undef LMS7002M_RFE_LNAL
-#undef LMS7002M_RFE_LNAW
-#undef LMS7002M_RFE_LB1
-#undef LMS7002M_RFE_LB2
-enum {
-    LMS7002M_RFE_NONE = 0,
-    LMS7002M_RFE_LNAH,
-    LMS7002M_RFE_LNAL,
-    LMS7002M_RFE_LNAW,
-};
-enum {
-    LMS7002M_RFE_LB1 = 1,
-    LMS7002M_RFE_LB2,
-};
+#define LMS7002M_RFE_NONE 0
+#define LMS7002M_RFE_LNAH 1
+#define LMS7002M_RFE_LNAL 2
+#define LMS7002M_RFE_LNAW 3
 
-#endif
+#define LMS7002M_RFE_LB1 1
+#define LMS7002M_RFE_LB2 2
 
 void SoapyLiteXXTRX::setAntenna(const int direction, const size_t channel,
                            const std::string &name) {
     std::lock_guard<std::mutex> lock(_mutex);
-
     int rx_rf_switch = 0;
     if (direction == SOAPY_SDR_RX) {
         int path = LMS7002M_RFE_NONE;
@@ -453,11 +351,7 @@ void SoapyLiteXXTRX::setAntenna(const int direction, const size_t channel,
         else
             throw std::runtime_error("SoapyLiteXXTRX::setAntenna(RX, " + name +
                                      ") - unknown antenna name");
-#ifndef USE_OLD
         _lms2->SetPath(lime::TRXDir::Rx, channel % 2, path);
-#else
-        LMS7002M_rfe_set_path(_lms, ch2LMS(channel), path);
-#endif
         litepcie_writel(_fd, CSR_RF_SWITCHES_RX_ADDR, rx_rf_switch);
     }
     if (direction == SOAPY_SDR_TX) {
@@ -474,12 +368,7 @@ void SoapyLiteXXTRX::setAntenna(const int direction, const size_t channel,
         else
             throw std::runtime_error("SoapyLiteXXTRX::setAntenna(TX, " + name +
                                      ") - unknown antenna name");
-#ifndef USE_OLD
-        // FIXME: same ?
         _lms2->SetPath(lime::TRXDir::Tx, channel % 2, band);
-#else
-        LMS7002M_trf_select_band(_lms, ch2LMS(channel), band);
-#endif
         litepcie_writel(_fd, CSR_RF_SWITCHES_TX_ADDR, tx_rf_switch);
     }
     _cachedAntValues[direction][channel] = name;
@@ -509,13 +398,8 @@ void SoapyLiteXXTRX::setDCOffsetMode(const int direction, const size_t channel,
     std::lock_guard<std::mutex> lock(_mutex);
 
     if (direction == SOAPY_SDR_RX) {
-#ifndef USE_OLD
-    _lms2->Modify_SPI_Reg_bits(LMS7param(DC_BYP_RXTSP), automatic == 0, channel);
-    /* FIXME: missing window */
-#else
-        LMS7002M_rxtsp_set_dc_correction(_lms, ch2LMS(channel), automatic,
-                                         7 /*max*/);
-#endif
+    	/* FIXME: missing window */
+    	_lms2->Modify_SPI_Reg_bits(LMS7param(DC_BYP_RXTSP), automatic == 0, channel);
         _rxDCOffsetMode = automatic;
     } else {
         SoapySDR::Device::setDCOffsetMode(direction, channel, automatic);
@@ -545,17 +429,10 @@ void SoapyLiteXXTRX::setDCOffset(const int direction, const size_t channel,
                             const std::complex<double> &offset) {
     std::lock_guard<std::mutex> lock(_mutex);
 
-#ifndef USE_OLD
     const auto lmsDir = (direction == SOAPY_SDR_TX) ? lime::TRXDir::Tx : lime::TRXDir::Rx;
     _lms2->Modify_SPI_Reg_bits(LMS7param(MAC), (channel % 2) + 1);
     _lms2->SetDCOffset(lmsDir, offset.real(), offset.imag());
-#endif
-
     if (direction == SOAPY_SDR_TX) {
-#ifdef USE_OLD
-        LMS7002M_txtsp_set_dc_correction(_lms, ch2LMS(channel), offset.real(),
-                                         offset.imag());
-#endif
         _txDCOffset = offset;
     } else {
         SoapySDR::Device::setDCOffset(direction, channel, offset);
@@ -591,17 +468,7 @@ void SoapyLiteXXTRX::setIQBalance(const int direction, const size_t channel,
     _lms2->SetIQBalance(lmsDir, std::arg(balance), gainI, gainQ);
 
 #else
-#ifdef USE_OLD
-    if (direction == SOAPY_SDR_TX) {
-        LMS7002M_txtsp_set_iq_correction(_lms, ch2LMS(channel),
-                                         std::arg(balance), std::abs(balance));
-    } else {
-        LMS7002M_rxtsp_set_iq_correction(_lms, ch2LMS(channel),
-                                         std::arg(balance), std::abs(balance));
-    }
-#else
     set_iq_correction(direction, channel, std::arg(balance), std::abs(balance));
-#endif
 #endif
     _cachedIqBalValues[direction][channel] = balance;
 }
@@ -721,17 +588,14 @@ void SoapyLiteXXTRX::setGain(int direction, size_t channel, const double value) 
 void SoapyLiteXXTRX::setGain(const int direction, const size_t channel,
                         const std::string &name, const double value) {
     std::lock_guard<std::mutex> lock(_mutex);
-#ifndef USE_OLD
     lime::LMS7002M::Channel chan = channel > 0 ? lime::LMS7002M::Channel::ChB : lime::LMS7002M::Channel::ChA;
     lime::OpStatus ret = lime::OpStatus::Success;
-#endif
 
     SoapySDR::logf(SOAPY_SDR_DEBUG, "SoapyLiteXXTRX::setGain(%s, ch%d, %s, %f dB)",
                    dir2Str(direction), channel, name.c_str(), value);
 
     double &actualValue = _cachedGainValues[direction][channel][name];
 
-#ifndef USE_OLD
     if (direction == SOAPY_SDR_RX and name == "LNA") {
         ret = _lms2->SetRFELNA_dB(value, chan);
         actualValue = _lms2->GetRFELNA_dB(chan);
@@ -761,33 +625,6 @@ void SoapyLiteXXTRX::setGain(const int direction, const size_t channel,
         ret = _lms2->SetTRFLoopbackPAD_dB(value, chan);
         actualValue = _lms2->GetTRFLoopbackPAD_dB(chan);
     }
-#else
-    if (direction == SOAPY_SDR_RX and name == "LNA") {
-        actualValue = LMS7002M_rfe_set_lna(_lms, ch2LMS(channel), value);
-    }
-
-    if (direction == SOAPY_SDR_RX and name == "LB_LNA") {
-        actualValue =
-            LMS7002M_rfe_set_loopback_lna(_lms, ch2LMS(channel), value);
-    }
-
-    if (direction == SOAPY_SDR_RX and name == "TIA") {
-        actualValue = LMS7002M_rfe_set_tia(_lms, ch2LMS(channel), value);
-    }
-
-    if (direction == SOAPY_SDR_RX and name == "PGA") {
-        actualValue = LMS7002M_rbb_set_pga(_lms, ch2LMS(channel), value);
-    }
-
-    if (direction == SOAPY_SDR_TX and name == "PAD") {
-        actualValue = LMS7002M_trf_set_pad(_lms, ch2LMS(channel), value);
-    }
-
-    if (direction == SOAPY_SDR_TX and name == "LB_PAD") {
-        actualValue =
-            LMS7002M_trf_set_loopback_pad(_lms, ch2LMS(channel), value);
-    }
-#endif
 }
 
 double SoapyLiteXXTRX::getGain(const int direction, const size_t channel,
@@ -829,15 +666,9 @@ void SoapyLiteXXTRX::setFrequency(const int direction, const size_t channel,
 
     if (name == "RF") {
         double actualFreq = 0.0;
-#ifdef USE_OLD
-        int ret = LMS7002M_set_lo_freq(_lms, dir2LMS(direction), _refClockRate,
-                                       frequency, &actualFreq);
-        if (ret != 0)
-#else
         lime::OpStatus ret = _lms2->SetFrequencySX(
             ((direction == SOAPY_SDR_RX)?lime::TRXDir::Rx:lime::TRXDir::Tx), frequency);
         if (ret != lime::OpStatus::Success)
-#endif
             throw std::runtime_error("SoapyLiteXXTRX::setFrequency(" +
                                      std::to_string(frequency / 1e6) +
                                      " MHz) failed - "/* + std::to_string(ret)*/);
@@ -845,7 +676,7 @@ void SoapyLiteXXTRX::setFrequency(const int direction, const size_t channel,
         _cachedFreqValues[direction][1][name] = actualFreq;
     }
 
-#ifdef USE_OLD
+#ifdef FIXME
     /* FIXME: read only with LimeSuiteNG */
     if (name == "BB") {
         const double baseRate = this->getTSPRate(direction);
@@ -895,7 +726,6 @@ SoapyLiteXXTRX::getFrequencyRange(const int direction, const size_t /*channel*/,
 void SoapyLiteXXTRX::setSampleRate(const int direction, const size_t channel,
                               const double rate) {
     std::lock_guard<std::mutex> lock(_mutex);
-#ifndef USE_OLD
     std::string dirName ((direction == SOAPY_SDR_RX) ? "Rx" : "Tx");
     SoapySDR::logf(SOAPY_SDR_DEBUG, "setSampleRate(%s, %ld, %g MHz)", dirName, channel, rate / 1e6);
 
@@ -907,42 +737,6 @@ void SoapyLiteXXTRX::setSampleRate(const int direction, const size_t channel,
     }
 
     _cachedSampleRates[direction] = rate;
-#else
-
-    const double baseRate = this->getTSPRate(direction);
-    const double factor = baseRate / rate;
-    int intFactor = 1 << int((std::log(factor) / std::log(2.0)) + 0.5);
-    SoapySDR::logf(
-        SOAPY_SDR_INFO,
-        "SoapyLiteXXTRX::setSampleRate(%s, %f MHz), baseRate %f MHz, factor %f",
-        dir2Str(direction), rate / 1e6, baseRate / 1e6, factor);
-    if (intFactor < 2)
-        throw std::runtime_error("SoapyLiteXXTRX::setSampleRate() -- rate too high");
-    intFactor = 1 << int((std::log(factor) / std::log(2.0)) + 0.5);
-    printf("inFactor %d\n", intFactor);
-    if (intFactor > 32)
-        throw std::runtime_error("SoapyLiteXXTRX::setSampleRate() -- rate too low");
-
-    if (std::abs(factor - intFactor) > 0.01)
-        SoapySDR::logf(SOAPY_SDR_WARNING,
-                       "SoapyLiteXXTRX::setSampleRate(): not a power of two factor: "
-                       "TSP Rate = %f MHZ, Requested rate = %f MHz",
-                       baseRate / 1e6, rate / 1e6);
-
-    // apply the settings, both the interp/decim has to be matched with the lml
-    // interface divider the lml interface needs a clock rate 2x the sample rate
-    // for DDR TRX IQ mode
-    if (direction == SOAPY_SDR_RX) {
-        LMS7002M_rxtsp_set_decim(_lms, LMS_CHAB, intFactor);
-        LMS7002M_configure_lml_port(_lms, LMS_PORT1, LMS_RX, intFactor / 2);
-    }
-    if (direction == SOAPY_SDR_TX) {
-        LMS7002M_txtsp_set_interp(_lms, LMS_CHAB, intFactor);
-        LMS7002M_configure_lml_port(_lms, LMS_PORT2, LMS_TX, intFactor / 2);
-    }
-
-    _cachedSampleRates[direction] = baseRate / intFactor;
-#endif
 }
 
 double SoapyLiteXXTRX::getSampleRate(const int direction, const size_t) const {
@@ -974,48 +768,24 @@ void SoapyLiteXXTRX::setBandwidth(const int direction, const size_t channel,
     SoapySDR::logf(SOAPY_SDR_DEBUG, "SoapyLiteXXTRX::setBandwidth(%s, ch%d, %f MHz)",
                    dir2Str(direction), channel, bw / 1e6);
 
-#ifndef USE_OLD
     lime::OpStatus ret = lime::OpStatus::Success;
     _lms2->Modify_SPI_Reg_bits(LMS7param(MAC), (channel % 2) + 1);
-#else
-    int ret = 0;
-#endif
     double &actualBw = _cachedFilterBws[direction][channel];
     if (direction == SOAPY_SDR_RX) {
-#ifndef USE_OLD
         ret = _lms2->CalibrateRx(bw, false);
         if (ret == lime::OpStatus::Success)
-#else
-        //ret = LMS7002M_rbb_set_filter_bw(_lms, ch2LMS(channel), bw, &actualBw);
-        ret = LMS7002M_mcu_calibration_rx(_lms, _refClockRate, bw);
-        if (ret == 0)
-#endif
             actualBw = bw;
     }
     if (direction == SOAPY_SDR_TX) {
-#ifndef USE_OLD
         ret = _lms2->CalibrateTx(bw, false);
         if (ret == lime::OpStatus::Success)
-#else
-        //ret = LMS7002M_tbb_set_filter_bw(_lms, ch2LMS(channel), bw, &actualBw);
-        ret = LMS7002M_mcu_calibration_tx(_lms, _refClockRate, bw);
-        if (ret == 0)
-#endif
             actualBw = bw;
     }
 
-#ifndef USE_OLD
     if (ret != lime::OpStatus::Success)
-#else
-    if (ret != 0)
-#endif
         throw std::runtime_error("SoapyLiteXXTRX::setBandwidth(" +
                                  std::to_string(bw / 1e6) + " MHz) failed - " +
-#ifndef USE_OLD
                                  "");
-#else
-                                 std::to_string(ret));
-#endif
 }
 
 double SoapyLiteXXTRX::getBandwidth(const int direction,
@@ -1065,17 +835,11 @@ double SoapyLiteXXTRX::getTSPRate(const int direction) const {
 void SoapyLiteXXTRX::setMasterClockRate(const double rate) {
     std::lock_guard<std::mutex> lock(_mutex);
 
-#ifndef USE_OLD
     lime::LMS7002M::CGEN_details out;
     lime::OpStatus ret = _lms2->SetFrequencyCGEN(rate, true, &out);
     if (ret == lime::OpStatus::Success) {
         _masterClockRate = out.frequency;
     } else {
-#else
-    int ret =
-        LMS7002M_set_data_clock(_lms, _refClockRate, rate, &_masterClockRate);
-    if (ret != 0) {
-#endif
         SoapySDR::logf(SOAPY_SDR_ERROR, "LMS7002M_set_data_clock(%f MHz) -> %d",
                        rate / 1e6, ret);
         throw std::runtime_error("XTRX fail LMS7002M_set_data_clock()");
@@ -1267,30 +1031,18 @@ std::vector<std::string> SoapyLiteXXTRX::listRegisterInterfaces(void) const {
 
 
 void SoapyLiteXXTRX::writeRegister(const unsigned addr, const unsigned value) {
-#ifdef USE_OLD
-    LMS7002M_spi_write(_lms, addr, value);
-#else
     _lms2->SPI_write(addr, value);
-#endif
 }
 
 unsigned SoapyLiteXXTRX::readRegister(const unsigned addr) const {
-#ifdef USE_OLD
-    return LMS7002M_spi_read(_lms, addr);
-#else
     return _lms2->SPI_read(addr);
-#endif
 }
 
 
 
 void SoapyLiteXXTRX::writeRegister(const std::string &name, const unsigned addr, const unsigned value) {
     if (name == "LMS7002M") {
-#ifdef USE_OLD
-        LMS7002M_spi_write(_lms, addr, value);
-#else
         _lms2->SPI_write(addr, value);
-#endif
     } else if (name == "LitePCI") {
         litepcie_writel(_fd, addr, value);
     } else
@@ -1299,11 +1051,7 @@ void SoapyLiteXXTRX::writeRegister(const std::string &name, const unsigned addr,
 
 unsigned SoapyLiteXXTRX::readRegister(const std::string &name, const unsigned addr) const {
     if (name == "LMS7002M") {
-#ifdef USE_OLD
-        return LMS7002M_spi_read(_lms, addr);
-#else
         return _lms2->SPI_read(addr);
-#endif
     } else if (name == "LitePCI") {
         return litepcie_readl(_fd, addr);
     } else
