@@ -42,6 +42,13 @@
  */
 #define TEST_CFG
 const std::vector<std::pair<uint16_t, uint16_t>> xtrx_default_cfg = {
+#if 1
+    {0x0023, 0x5542},  // 0b1010101 0100 0010
+    {0x002a, 0x0192},
+    {0x002b, 0x002c},  // 0b0010 1100
+    {0x002c, 0xffff},
+    {0x00ad, 0x03f3},
+#else
     { 0x0022, 0x0FFF },
 #ifndef TEST_CFG
     { 0x0023, 0x5550 },
@@ -98,7 +105,7 @@ const std::vector<std::pair<uint16_t, uint16_t>> xtrx_default_cfg = {
     { 0x0404, 0x0006 },
     { 0x040B, 0x1020 },
     { 0x040C, 0x00FB },
-
+#endif
     // LDOs
     { 0x0092, 0x0D15 },
     { 0x0093, 0x01B1 },
