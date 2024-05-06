@@ -9,21 +9,18 @@
 // http://www.apache.org/licenses/LICENSE-2.0
 //
 
-#define USE_NG
-#undef USE_NG
-//#define USE_NG2
-//#define USE_OLD
-
-#include "LiteXXTRXDevice.hpp"
-#include <SoapySDR/Registry.hpp>
-#include <SoapySDR/Logger.hpp>
 #include <fstream>
 #include <memory>
 #include <sys/mman.h>
 
+#include "LiteXXTRXDevice.hpp"
+
 #include <lms7002mNG/IComms.h>
 #include <lms7002mNG/OpStatus.h>
 #include <lms7002mNG/LMS7002M_parameters.h>
+
+#include <SoapySDR/Registry.hpp>
+#include <SoapySDR/Logger.hpp>
 
 /* Default configuration
  * mainly for TX->PORT2 & RX->PORT1

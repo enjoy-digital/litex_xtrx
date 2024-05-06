@@ -9,12 +9,12 @@
 // http://www.apache.org/licenses/LICENSE-2.0
 //
 
-#include "LiteXXTRXDevice.hpp"
-
 #include <chrono>
 #include <cassert>
 #include <thread>
 #include <sys/mman.h>
+
+#include "LiteXXTRXDevice.hpp"
 
 SoapySDR::Stream *SoapyLiteXXTRX::setupStream(const int direction,
                                          const std::string &format,

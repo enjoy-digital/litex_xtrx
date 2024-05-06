@@ -11,12 +11,12 @@
 
 #include <cmath>
 
-#include <SoapySDR/Logger.hpp>
-
 #include "LiteXXTRXDevice.hpp"
 
 #include <lms7002mNG/OpStatus.h>
 #include <lms7002mNG/LMS7002M_parameters.h>
+
+#include <SoapySDR/Logger.hpp>
 
 bool SoapyLiteXXTRX::LMS1_SetSampleRate(double f_Hz, uint8_t rxDecimation, uint8_t txInterpolation)
 {

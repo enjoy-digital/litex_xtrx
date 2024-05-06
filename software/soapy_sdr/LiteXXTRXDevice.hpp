@@ -9,10 +9,6 @@
 // http://www.apache.org/licenses/LICENSE-2.0
 //
 
-#include <SoapySDR/Device.hpp>
-#include <SoapySDR/Logger.hpp>
-#include <SoapySDR/Time.hpp>
-#include <SoapySDR/Formats.hpp>
 #include <mutex>
 #include <cstring>
 #include <cstdlib>
@@ -21,8 +17,14 @@
 #include <memory>
 
 #include "liblitepcie.h"
+
 #include <lms7002mNG/OpStatus.h>
 #include <lms7002mNG/LMS7002M.h>
+
+#include <SoapySDR/Device.hpp>
+#include <SoapySDR/Logger.hpp>
+#include <SoapySDR/Time.hpp>
+#include <SoapySDR/Formats.hpp>
 
 #define DLL_EXPORT __attribute__ ((visibility ("default")))
 #define BYTES_PER_SAMPLE 2 // TODO validate this

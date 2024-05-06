@@ -12,8 +12,9 @@
 #include <fcntl.h>
 #include <unistd.h>
 
-#include <SoapySDR/Registry.hpp>
 #include "LiteXXTRXDevice.hpp"
+
+#include <SoapySDR/Registry.hpp>
 
 /***********************************************************************
  * Find available devices
