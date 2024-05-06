@@ -2,7 +2,7 @@
 #include <unistd.h>
 
 #include <SoapySDR/Registry.hpp>
-#include "XTRXDevice.hpp"
+#include "LiteXXTRXDevice.hpp"
 
 /***********************************************************************
  * Find available devices

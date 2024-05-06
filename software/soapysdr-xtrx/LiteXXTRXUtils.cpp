@@ -2,7 +2,7 @@
 
 #include <SoapySDR/Logger.hpp>
 
-#include "XTRXDevice.hpp"
+#include "LiteXXTRXDevice.hpp"
 
 #include <lms7002mNG/OpStatus.h>
 #include <lms7002mNG/LMS7002M_parameters.h>

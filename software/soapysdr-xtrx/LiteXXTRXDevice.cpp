@@ -24,7 +24,7 @@
 //#define USE_NG2
 //#define USE_OLD
 
-#include "XTRXDevice.hpp"
+#include "LiteXXTRXDevice.hpp"
 #include <SoapySDR/Registry.hpp>
 #include <SoapySDR/Logger.hpp>
 #include <fstream>
