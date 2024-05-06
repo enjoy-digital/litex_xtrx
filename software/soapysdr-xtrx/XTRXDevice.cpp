@@ -40,21 +40,75 @@
  * mainly for TX->PORT2 & RX->PORT1
  * FIXME: registers details
  */
-std::map<uint32_t, uint32_t> xtrx_default_cfg = {
-    {0x0023, 0x5542},
+#define TEST_CFG
+const std::vector<std::pair<uint16_t, uint16_t>> xtrx_default_cfg = {
+    { 0x0022, 0x0FFF },
+#ifndef TEST_CFG
+    { 0x0023, 0x5550 },
+    { 0x002B, 0x0038 },
+    { 0x002C, 0x0000 },
+#else
+    {0x0023, 0x5542},  // 0b1010101 0100 0010
     {0x002a, 0x0192},
-    {0x002b, 0x002c},
+    {0x002b, 0x002c},  // 0b0010 1100
     {0x002c, 0xffff},
+#endif
+    { 0x002D, 0x0641 },
+    { 0x0086, 0x4101 },
+    { 0x0087, 0x5555 },
+    { 0x0088, 0x0525 },
+    { 0x0089, 0x1078 },
+    { 0x008B, 0x218C },
+    { 0x008C, 0x267B },
+    { 0x00A6, 0x000F },
+#ifdef TEST_CFG
     {0x00ad, 0x03f3},
+#endif
+    { 0x00A9, 0x8000 },
+    { 0x00AC, 0x2000 },
+    { 0x0108, 0x218C },
+    { 0x0109, 0x57C1 },
+    { 0x010A, 0x154C },
+    { 0x010B, 0x0001 },
+    { 0x010C, 0x8865 },
+    { 0x010D, 0x011A },
+    { 0x010E, 0x0000 },
+    { 0x010F, 0x3142 },
+    { 0x0110, 0x2B14 },
+    { 0x0111, 0x0000 },
+    { 0x0112, 0x000C },
+    { 0x0113, 0x03C2 },
+    { 0x0114, 0x01F0 },
+    { 0x0115, 0x000D },
+    { 0x0118, 0x418C },
+    { 0x0119, 0x5292 },
+    { 0x011A, 0x3001 },
+    { 0x011C, 0x8941 },
+    { 0x011D, 0x0000 },
+    { 0x011E, 0x0984 },
+    { 0x0120, 0xE6C0 },
+    { 0x0121, 0x3638 },
+    { 0x0122, 0x0514 },
+    { 0x0123, 0x200F },
+    { 0x0200, 0x00E1 },
+    { 0x0208, 0x017B },
+    { 0x020B, 0x4000 },
+    { 0x020C, 0x8000 },
+    { 0x0400, 0x8081 },
+    { 0x0404, 0x0006 },
+    { 0x040B, 0x1020 },
+    { 0x040C, 0x00FB },
+
+    // LDOs
+    { 0x0092, 0x0D15 },
+    { 0x0093, 0x01B1 },
+    { 0x00A6, 0x000F },
     /* XTRX specific */
     /* XBUS */
     {0x0085, 0x0019}, // [4] EN_OUT2_XBUF_TX:   TX XBUF 2nd output is disabled
                       // [3] EN_TBUFIN_XBUF_RX: RX XBUF input is coming from TX
-    /* LDO */
-    {0x0092, 0x0D15}, // orig: 0xffff
-    {0x0093, 0x01B1}, // orig: 0x03ff
-    {0x00A6, 0x000F}, // orig: 0x0001
 };
+
 
 class DLL_EXPORT LMS_SPI: public lime::ISPI {
     public:
@@ -164,10 +218,10 @@ SoapyLiteXXTRX::SoapyLiteXXTRX(const SoapySDR::Kwargs &args)
     // setup LMS7002M
     _lms_spi = std::make_shared<LMS_SPI>(_fd);
     _lms2 = new lime::LMS7002M(_lms_spi);
-    _lms2->SetReferenceClk_SX(lime::TRXDir::Rx, _refClockRate);
-    _lms2->SetClockFreq(lime::LMS7002M::ClockID::CLK_REFERENCE, _refClockRate);
     _lms2->SoftReset();
     _lms2->Modify_SPI_Reg_bits(LMS7param(SPIMODE), 1); // 4 Wire SPI Mode
+    _lms2->SetReferenceClk_SX(lime::TRXDir::Rx, _refClockRate);
+    _lms2->SetClockFreq(lime::LMS7002M::ClockID::CLK_REFERENCE, _refClockRate);
 
     // read info register
     uint16_t ver = _lms2->Get_SPI_Reg_bits(LMS7param(VER));
