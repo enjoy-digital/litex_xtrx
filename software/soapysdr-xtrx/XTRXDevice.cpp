@@ -220,6 +220,10 @@ SoapyLiteXXTRX::SoapyLiteXXTRX(const SoapySDR::Kwargs &args)
     _lms2 = new lime::LMS7002M(_lms_spi);
     _lms2->SoftReset();
     _lms2->Modify_SPI_Reg_bits(LMS7param(SPIMODE), 1); // 4 Wire SPI Mode
+    // configure data port directions and data clock rates
+    for (auto &p: xtrx_default_cfg)
+        _lms2->SPI_write(p.first, p.second);
+
     _lms2->SetReferenceClk_SX(lime::TRXDir::Rx, _refClockRate);
     _lms2->SetClockFreq(lime::LMS7002M::ClockID::CLK_REFERENCE, _refClockRate);
 
@@ -230,10 +234,6 @@ SoapyLiteXXTRX::SoapyLiteXXTRX(const SoapySDR::Kwargs &args)
 
     // set clock to Internal Reference Clock
     this->setClockSource("internal");
-
-    // configure data port directions and data clock rates
-    for (auto &p: xtrx_default_cfg)
-        _lms2->SPI_write(p.first, p.second);
 
     // enable components
     _lms2->EnableChannel(lime::TRXDir::Tx, 0, true);  // LMS_CHA
@@ -452,8 +452,8 @@ void SoapyLiteXXTRX::setDCOffsetMode(const int direction, const size_t channel,
     std::lock_guard<std::mutex> lock(_mutex);
 
     if (direction == SOAPY_SDR_RX) {
-    	/* FIXME: missing window */
-    	_lms2->Modify_SPI_Reg_bits(LMS7param(DC_BYP_RXTSP), automatic == 0, channel);
+        /* FIXME: missing window */
+        _lms2->Modify_SPI_Reg_bits(LMS7param(DC_BYP_RXTSP), automatic == 0, channel);
         _rxDCOffsetMode = automatic;
     } else {
         SoapySDR::Device::setDCOffsetMode(direction, channel, automatic);
@@ -484,7 +484,8 @@ void SoapyLiteXXTRX::setDCOffset(const int direction, const size_t channel,
     std::lock_guard<std::mutex> lock(_mutex);
 
     const auto lmsDir = (direction == SOAPY_SDR_TX) ? lime::TRXDir::Tx : lime::TRXDir::Rx;
-    _lms2->Modify_SPI_Reg_bits(LMS7param(MAC), (channel % 2) + 1);
+    const lime::LMS7002M::Channel chan = channel > 0 ? lime::LMS7002M::Channel::ChB : lime::LMS7002M::Channel::ChA;
+    _lms2->SetActiveChannel(chan);
     _lms2->SetDCOffset(lmsDir, offset.real(), offset.imag());
     if (direction == SOAPY_SDR_TX) {
         _txDCOffset = offset;
@@ -509,6 +510,7 @@ void SoapyLiteXXTRX::setIQBalance(const int direction, const size_t channel,
 //#define FIXME
 #ifdef FIXME
     const auto lmsDir = (direction == SOAPY_SDR_TX) ? lime::TRXDir::Tx : lime::TRXDir::Rx;
+    const lime::LMS7002M::Channel chan = channel > 0 ? lime::LMS7002M::Channel::ChB : lime::LMS7002M::Channel::ChA;
     const double gain = std::abs(balance);
     double gainI = 1.0;
     double gainQ = 1.0;
@@ -518,7 +520,7 @@ void SoapyLiteXXTRX::setIQBalance(const int direction, const size_t channel,
     if (gain > 1.0)
         gainQ = 1.0 / gain;
 
-    _lms2->Modify_SPI_Reg_bits(LMS7param(MAC), (channel % 2) + 1);
+    _lms2->SetActiveChannel(chan);
     _lms2->SetIQBalance(lmsDir, std::arg(balance), gainI, gainQ);
 
 #else
@@ -532,7 +534,8 @@ void SoapyLiteXXTRX::set_iq_correction(const int direction,
     const double phase,
     const double gain)
 {
-    _lms2->Modify_SPI_Reg_bits(LMS7param(MAC), (channel % 2) + 1);
+    const lime::LMS7002M::Channel chan = channel > 0 ? lime::LMS7002M::Channel::ChB : lime::LMS7002M::Channel::ChA;
+    _lms2->SetActiveChannel(chan);
 
     const bool bypassPhase = (phase == 0.0);
     const bool bypassGain = (gain == 1.0) || (gain == 0.0);
@@ -602,6 +605,8 @@ void SoapyLiteXXTRX::setGain(int direction, size_t channel, const double value) 
     lime::LMS7002M::Channel chan = channel > 0 ? lime::LMS7002M::Channel::ChB : lime::LMS7002M::Channel::ChA;
 
     SoapySDR::logf(SOAPY_SDR_DEBUG, "SoapyLiteXXTRX::setGain(%s, ch%d, %f dB)",
+                   dir2Str(direction), channel, value);
+    printf("SoapyLiteXXTRX::setGain(%s, ch%d, %f dB)",
                    dir2Str(direction), channel, value);
 
     if (SOAPY_SDR_TX == direction) {
@@ -823,7 +828,8 @@ void SoapyLiteXXTRX::setBandwidth(const int direction, const size_t channel,
                    dir2Str(direction), channel, bw / 1e6);
 
     lime::OpStatus ret = lime::OpStatus::Success;
-    _lms2->Modify_SPI_Reg_bits(LMS7param(MAC), (channel % 2) + 1);
+    const lime::LMS7002M::Channel chan = channel > 0 ? lime::LMS7002M::Channel::ChB : lime::LMS7002M::Channel::ChA;
+    _lms2->SetActiveChannel(chan);
     double &actualBw = _cachedFilterBws[direction][channel];
     if (direction == SOAPY_SDR_RX) {
         ret = _lms2->CalibrateRx(bw, false);
