@@ -21,6 +21,7 @@ def build_driver(path, cmake_options=""):
     for command in commands:
         run_command(command)
 
-build_driver("LMS7002M-driver")
+run_command("cd kernel && make clean all")
+run_command("cd user   && make clean all")
 build_driver("lms7002mNG")
 build_driver("soapysdr-xtrx", "-DCMAKE_INSTALL_PREFIX=/usr")
