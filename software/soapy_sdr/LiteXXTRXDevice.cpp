@@ -187,7 +187,7 @@ class DLL_EXPORT LMS_SPI: public lime::ISPI {
 };
 
 // Forward declaration for usage in constructor.
-std::string getXTRXSerial(int fd);
+std::string getLiteXXTRXSerial(int fd);
 
 
 /***********************************************************************
@@ -212,7 +212,7 @@ SoapyLiteXXTRX::SoapyLiteXXTRX(const SoapySDR::Kwargs &args)
 
     // open LitePCIe descriptor
     if (args.count("path") == 0) {
-        // if path is not present, then findXTRX had zero devices enumerated
+        // if path is not present, then findLiteXXTRX had zero devices enumerated
         throw std::runtime_error("No LitePCIe devices found!");
     }
     std::string path = args.at("path");
@@ -220,7 +220,7 @@ SoapyLiteXXTRX::SoapyLiteXXTRX(const SoapySDR::Kwargs &args)
     if (_fd < 0)
         throw std::runtime_error("SoapyLiteXXTRX(): failed to open " + path);
 
-    SoapySDR::logf(SOAPY_SDR_INFO, "Opened devnode %s, serial %s", path.c_str(), getXTRXSerial(_fd).c_str());
+    SoapySDR::logf(SOAPY_SDR_INFO, "Opened devnode %s, serial %s", path.c_str(), getLiteXXTRXSerial(_fd).c_str());
     // reset the LMS7002M
     litepcie_writel(_fd, CSR_LMS7002M_CONTROL_ADDR,
         1 * (1 << CSR_LMS7002M_CONTROL_RESET_OFFSET)

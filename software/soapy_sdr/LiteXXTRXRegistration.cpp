@@ -20,14 +20,14 @@
  * Find available devices
  **********************************************************************/
 
-std::string getXTRXIdentification(int fd) {
+std::string getLiteXXTRXIdentification(int fd) {
     char fpga_identification[256];
     for (int i = 0; i < 256; i ++)
         fpga_identification[i] = litepcie_readl(fd, CSR_IDENTIFIER_MEM_BASE + 4 * i);
     return std::string(&fpga_identification[0]);
 }
 
-std::string getXTRXSerial(int fd) {
+std::string getLiteXXTRXSerial(int fd) {
     char serial[32];
     snprintf(serial, 32, "%x%08x",
                 litepcie_readl(fd, CSR_DNA_ID_ADDR + 4 * 0),
@@ -35,7 +35,7 @@ std::string getXTRXSerial(int fd) {
     return std::string(&serial[0]);
 }
 
-std::vector<SoapySDR::Kwargs> findXTRX(const SoapySDR::Kwargs &args) {
+std::vector<SoapySDR::Kwargs> findLiteXXTRX(const SoapySDR::Kwargs &args) {
     std::vector<SoapySDR::Kwargs> discovered;
     if (args.count("path") != 0) {
         // respect user choice
@@ -46,8 +46,8 @@ std::vector<SoapySDR::Kwargs> findXTRX(const SoapySDR::Kwargs &args) {
         // gather device info
         SoapySDR::Kwargs dev(args);
         dev["device"] = "LiteXXTRX";
-        dev["serial"] = getXTRXSerial(fd);
-        dev["identification"] = getXTRXIdentification(fd);
+        dev["serial"] = getLiteXXTRXSerial(fd);
+        dev["identification"] = getLiteXXTRXIdentification(fd);
         dev["version"] = "1234";
         size_t ofs = 0;
         while (ofs < sizeof(dev["serial"]) and dev["serial"][ofs] == '0') ofs++;
@@ -67,13 +67,13 @@ std::vector<SoapySDR::Kwargs> findXTRX(const SoapySDR::Kwargs &args) {
                 continue;
 
             // check the FPGA identification to see if this is an XTRX
-            std::string fpga_identification = getXTRXIdentification(fd);
+            std::string fpga_identification = getLiteXXTRXIdentification(fd);
             if (strstr(fpga_identification.c_str(), "LiteX SoC on Fairwaves XTRX") != NULL) {
                 // gather device info
                 SoapySDR::Kwargs dev(args);
                 dev["device"] = "LiteXXTRX";
                 dev["path"] = path;
-                dev["serial"] = getXTRXSerial(fd);
+                dev["serial"] = getLiteXXTRXSerial(fd);
                 dev["identification"] = &fpga_identification[0];
                 dev["version"] = "1234";
                 size_t ofs = 0;
@@ -113,5 +113,5 @@ SoapySDR::Device *makeLiteXXTRX(const SoapySDR::Kwargs &args) {
  * Registration
  **********************************************************************/
 
-static SoapySDR::Registry registerLiteXXTRX("LiteXXTRX", &findXTRX, &makeLiteXXTRX,
+static SoapySDR::Registry registerLiteXXTRX("LiteXXTRX", &findLiteXXTRX, &makeLiteXXTRX,
                                        SOAPY_SDR_ABI_VERSION);
