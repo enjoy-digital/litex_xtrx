@@ -115,6 +115,7 @@ const std::vector<std::pair<uint16_t, uint16_t>> xtrx_default_cfg = {
                       // [3] EN_TBUFIN_XBUF_RX: RX XBUF input is coming from TX
 };
 
+//#define LITEPCIE_SPI_DEBUG
 #define LITEPCIE_SPI_CS_HIGH (0 << 0)
 #define LITEPCIE_SPI_CS_LOW  (1 << 0)
 #define LITEPCIE_SPI_START   (1 << 0)
@@ -123,41 +124,41 @@ const std::vector<std::pair<uint16_t, uint16_t>> xtrx_default_cfg = {
 
 extern "C" {
 
-#include "liblitepcie.h"
+    #include "liblitepcie.h"
 
-#include <fcntl.h>
-#include <unistd.h>
+    #include <fcntl.h>
+    #include <unistd.h>
 
-//#define DBG_TRANSACTION
+    static inline uint32_t litepcie_lms7002m_spi_xfer(void *handle, const uint32_t mosi)
+    {
+        int *fd = (int *)handle;
+        uint32_t miso;
 
-static inline uint32_t litepcie_interface_transact(void *handle, const uint32_t data_in, const bool readback)
-{
-    int *fd = (int *)handle;
+        /* Load SPI MOSI Data */
+        litepcie_writel(*fd, CSR_LMS7002M_SPI_MOSI_ADDR, mosi);
 
-    //load tx data
-    litepcie_writel(*fd, CSR_LMS7002M_SPI_MOSI_ADDR, data_in);
+        /* Start SPI Xfer */
+        litepcie_writel(*fd, CSR_LMS7002M_SPI_CONTROL_ADDR, 32*LITEPCIE_SPI_LENGTH | LITEPCIE_SPI_START);
 
-    //start transaction
-    litepcie_writel(*fd, CSR_LMS7002M_SPI_CONTROL_ADDR, 32*LITEPCIE_SPI_LENGTH | LITEPCIE_SPI_START);
+        /* Wait for SPI Xfer */
+        while ((litepcie_readl(*fd, CSR_LMS7002M_SPI_STATUS_ADDR) & LITEPCIE_SPI_DONE) == 0);
 
-    //wait for completion
-    while ((litepcie_readl(*fd, CSR_LMS7002M_SPI_STATUS_ADDR) & LITEPCIE_SPI_DONE) == 0);
+        /* Get MISO Data */
+        miso = litepcie_readl(*fd, CSR_LMS7002M_SPI_MISO_ADDR) & 0xffff;
 
-    //load rx data
-    if (readback) {
-        uint32_t ret = litepcie_readl(*fd, CSR_LMS7002M_SPI_MISO_ADDR) & 0xffff;
-#ifdef DBG_TRANSACTION
-        printf("%s read  addr: 0x%04x -> %08x\n", __func__, 0x7fff & (data_in >> 16), ret);
-#endif
-        return ret;
-    } else {
-#ifdef DBG_TRANSACTION
-        printf("%s write addr: 0x%04x value: 0x%04x\n", __func__,
-            0x7fff & (data_in >> 16), data_in & 0xffff);
-#endif
-        return 0;
+    #ifdef LITEPCIE_SPI_DEBUG
+        /* Debug */
+        printf("%s addr: 0x%04x, mosi: 0x%08x, miso: 0x%08x\n",
+            __func__,
+            0x7fff & (mosi >> 16),
+            mosi & 0xffff,
+            miso & 0xffff
+        );
+    #endif
+
+        /* Return MISO Data */
+        return miso;
     }
-}
 
 }
 
@@ -173,7 +174,7 @@ class DLL_EXPORT LMS_SPI: public lime::ISPI {
                     uint32_t wr = MOSI[i];
                     if (readback)
                         wr = (0xffff & wr) << 16;
-                    rd = litepcie_interface_transact(&_fd, wr, readback);
+                    rd = litepcie_lms7002m_spi_xfer(&_fd, wr);
                     if (readback)
                         MISO[i] = rd;
             }
