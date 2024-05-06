@@ -657,8 +657,6 @@ void SoapyLiteXXTRX::setGain(int direction, size_t channel, const double value) 
 
     SoapySDR::logf(SOAPY_SDR_DEBUG, "SoapyLiteXXTRX::setGain(%s, ch%d, %f dB)",
                    dir2Str(direction), channel, value);
-    printf("SoapyLiteXXTRX::setGain(%s, ch%d, %f dB)",
-                   dir2Str(direction), channel, value);
 
     if (SOAPY_SDR_TX == direction) {
         if (_lms2->SetTRFPAD_dB(value, chan) != lime::OpStatus::Success)
