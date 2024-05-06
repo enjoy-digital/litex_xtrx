@@ -1,23 +1,13 @@
 //
-// SoapySDR driver for the LMS7002M-based Fairwaves XTRX.
+// SoapySDR driver for the LiteX-based alternative gateware for the Fairwaves/Lime XTRX.
 //
+// Copyright (c) 2021-2024 Enjoy Digital.
 // Copyright (c) 2021 Julia Computing.
 // Copyright (c) 2015-2015 Fairwaves, Inc.
 // Copyright (c) 2015-2015 Rice University
 // SPDX-License-Identifier: Apache-2.0
 // http://www.apache.org/licenses/LICENSE-2.0
 //
-
-// TODO
-//
-// - much here is copied from the EVB7 driver, which is also LMS7002M-based,
-//   but quite some functionality still needs to be adapted for the XTRX.
-//   preferably by somebody who actually knows about SDRs.
-//
-// - sometimes (after a reboot?) the SoapySDR driver fails to initialize the
-//   XTRX, esp. when using the loopback or pattern generator. executing
-//   `litex_test record /dev/null 1024`, even when that hangs, fixes that.
-//   what are we not properly initializing?
 
 #define USE_NG
 #undef USE_NG

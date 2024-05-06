@@ -1,6 +1,7 @@
 //
-// SoapySDR driver for the LMS7002M-based Fairwaves XTRX.
+// SoapySDR driver for the LiteX-based alternative gateware for the Fairwaves/Lime XTRX.
 //
+// Copyright (c) 2021-2024 Enjoy Digital.
 // Copyright (c) 2021 Julia Computing.
 // Copyright (c) 2015-2015 Fairwaves, Inc.
 // Copyright (c) 2015-2015 Rice University

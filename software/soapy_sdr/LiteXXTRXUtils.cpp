@@ -1,3 +1,14 @@
+//
+// SoapySDR driver for the LiteX-based alternative gateware for the Fairwaves/Lime XTRX.
+//
+// Copyright (c) 2021-2024 Enjoy Digital.
+// Copyright (c) 2021 Julia Computing.
+// Copyright (c) 2015-2015 Fairwaves, Inc.
+// Copyright (c) 2015-2015 Rice University
+// SPDX-License-Identifier: Apache-2.0
+// http://www.apache.org/licenses/LICENSE-2.0
+//
+
 #include <cmath>
 
 #include <SoapySDR/Logger.hpp>
