@@ -7,12 +7,9 @@
 # SPDX-License-Identifier: BSD-2-Clause
 
 import os
-import sys
 import argparse
 
 from migen import *
-from migen.fhdl.specials import Tristate
-from migen.genlib.cdc    import MultiReg
 
 from litex.gen import *
 
@@ -28,12 +25,12 @@ from litex.soc.integration.builder  import *
 from litex.soc.cores.clock     import *
 from litex.soc.cores.led       import LedChaser
 from litex.soc.cores.icap      import ICAP
+from litex.soc.cores.xadc      import XADC
+from litex.soc.cores.dna       import DNA
 from litex.soc.cores.gpio      import GPIOOut
 from litex.soc.cores.spi_flash import S7SPIFlash
 from litex.soc.cores.bitbang   import I2CMaster
 from litex.soc.cores.spi       import SPIMaster
-from litex.soc.cores.xadc      import XADC
-from litex.soc.cores.dna       import DNA
 
 from litepcie.phy.s7pciephy import S7PCIEPHY
 
@@ -113,16 +110,6 @@ class BaseSoC(SoCCore):
             "fairwaves_pro" : fairwaves_xtrx.Platform(variant="xc7a50t"),
             "limesdr"       : limesdr_xtrx.Platform()
         }[board]
-
-        # Configuration: See if useful in longterm and integrate properly.
-        with_rx_pattern = False
-        with_tx_test    = False
-        with_rxtx_loop  = False
-        with_analyzer   = True
-        if with_analyzer:
-            with_rx_scope   = True
-            with_tx_scope   = False
-            with_rxtx_scope = True
 
         # SoCCore ----------------------------------------------------------------------------------
         SoCCore.__init__(self, platform, sys_clk_freq,
@@ -303,7 +290,7 @@ class BaseSoC(SoCCore):
 # Build --------------------------------------------------------------------------------------------
 
 def main():
-    parser = argparse.ArgumentParser(description="LiteX SoC on Fairwaves/LimeSDR XTRX")
+    parser = argparse.ArgumentParser(description="LiteX SoC on Fairwaves/LimeSDR XTRX.")
     parser.add_argument("--board",   default="fairwaves_pro", help="Select XTRX board.", choices=["fairwaves_cs", "fairwaves_pro", "limesdr"])
     parser.add_argument("--build",   action="store_true",     help="Build bitstream.")
     parser.add_argument("--load",    action="store_true",     help="Load bitstream.")
