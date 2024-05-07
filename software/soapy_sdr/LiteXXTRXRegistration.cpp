@@ -20,86 +20,72 @@
  * Find available devices
  **********************************************************************/
 
+#define MAX_DEVICES 8
+
+std::string readFPGAData(int fd, unsigned int baseAddr, size_t size) {
+    std::string data(size, 0);
+    for (size_t i = 0; i < size; i++)
+        data[i] = static_cast<char>(litepcie_readl(fd, baseAddr + 4 * i));
+    return data;
+}
+
 std::string getLiteXXTRXIdentification(int fd) {
-    char fpga_identification[256];
-    for (int i = 0; i < 256; i ++)
-        fpga_identification[i] = litepcie_readl(fd, CSR_IDENTIFIER_MEM_BASE + 4 * i);
-    return std::string(&fpga_identification[0]);
+    return readFPGAData(fd, CSR_IDENTIFIER_MEM_BASE, 256);
 }
 
 std::string getLiteXXTRXSerial(int fd) {
+    unsigned int high = litepcie_readl(fd, CSR_DNA_ID_ADDR);
+    unsigned int low = litepcie_readl(fd, CSR_DNA_ID_ADDR + 4);
     char serial[32];
-    snprintf(serial, 32, "%x%08x",
-                litepcie_readl(fd, CSR_DNA_ID_ADDR + 4 * 0),
-                litepcie_readl(fd, CSR_DNA_ID_ADDR + 4 * 1));
-    return std::string(&serial[0]);
+    snprintf(serial, sizeof(serial), "%x%08x", high, low);
+    return std::string(serial);
+}
+
+std::string generateDeviceLabel(const SoapySDR::Kwargs& dev, const std::string& path) {
+    std::string serialTrimmed = dev.at("serial").substr(dev.at("serial").find_first_not_of('0'));
+    return dev.at("device") + " " + path + " " + serialTrimmed + " " + dev.at("identification");
+}
+
+SoapySDR::Kwargs createDeviceKwargs(int fd, const std::string& path) {
+    SoapySDR::Kwargs dev = {
+        {"device",         "LiteXXTRX"},
+        {"path",           path},
+        {"serial",         getLiteXXTRXSerial(fd)},
+        {"identification", getLiteXXTRXIdentification(fd)},
+        {"version",        "1234"},
+        {"label",          ""}
+    };
+    dev["label"] = generateDeviceLabel(dev, path);
+    return dev;
 }
 
 std::vector<SoapySDR::Kwargs> findLiteXXTRX(const SoapySDR::Kwargs &args) {
     std::vector<SoapySDR::Kwargs> discovered;
-    if (args.count("path") != 0) {
-        // respect user choice
-        int fd = open(args.at("path").c_str(), O_RDWR);
-        if (fd < 0)
-            throw std::runtime_error("Invalid device path specified (should be an accessible device node)");
 
-        // gather device info
-        SoapySDR::Kwargs dev(args);
-        dev["device"] = "LiteXXTRX";
-        dev["serial"] = getLiteXXTRXSerial(fd);
-        dev["identification"] = getLiteXXTRXIdentification(fd);
-        dev["version"] = "1234";
-        size_t ofs = 0;
-        while (ofs < sizeof(dev["serial"]) and dev["serial"][ofs] == '0') ofs++;
-        char label_str[256];
-        sprintf(label_str, "%s %s %s %s", dev["device"].c_str(), args.at("path").c_str(),
-                dev["serial"].c_str()+ofs, dev["identification"].c_str());
-        dev["label"] = label_str;
+    auto attemptToAddDevice = [&](const std::string& path) {
+        int fd = open(path.c_str(), O_RDWR);
+        if (fd < 0) return false;
+        auto dev = createDeviceKwargs(fd, path);
         close(fd);
 
-        discovered.push_back(dev);
+        if (dev["identification"].find("LiteX SoC on Fairwaves") != std::string::npos ||
+            dev["identification"].find("LiteX SoC on Lime") != std::string::npos) {
+            discovered.push_back(std::move(dev));
+            return true;
+        }
+        return false;
+    };
+
+    if (args.count("path") != 0) {
+        attemptToAddDevice(args.at("path"));
     } else {
-        // find all LitePCIe devices
-        for (int i = 0; i < 10; i++) {
-            std::string path = "/dev/litepcie" + std::to_string(i);
-            int fd = open(path.c_str(), O_RDWR);
-            if (fd < 0)
-                continue;
-
-            // check the FPGA identification to see if this is an XTRX
-            std::string fpga_identification = getLiteXXTRXIdentification(fd);
-            if (strstr(fpga_identification.c_str(), "LiteX SoC on Fairwaves") != NULL ||
-                strstr(fpga_identification.c_str(), "LiteX SoC on Lime")      != NULL) {
-                // gather device info
-                SoapySDR::Kwargs dev(args);
-                dev["device"] = "LiteXXTRX";
-                dev["path"] = path;
-                dev["serial"] = getLiteXXTRXSerial(fd);
-                dev["identification"] = &fpga_identification[0];
-                dev["version"] = "1234";
-                size_t ofs = 0;
-                while (ofs < sizeof(dev["serial"]) and dev["serial"][ofs] == '0') ofs++;
-                char label_str[256];
-                sprintf(label_str, "%s %s %s %s", dev["device"].c_str(), path.c_str(),
-                    dev["serial"].c_str()+ofs, dev["identification"].c_str());
-                dev["label"] = label_str;
-                close(fd);
-
-                // filter by serial if specified
-                if (args.count("serial") != 0) {
-                    // filter on serial number
-                    if (args.at("serial") != dev["serial"])
-                        continue;
-                }
-
-                discovered.push_back(dev);
-            }
+        for (int i = 0; i < MAX_DEVICES; i++) {
+            if (!attemptToAddDevice("/dev/litepcie" + std::to_string(i)))
+                break; // Stop trying if a device fails to open, assuming sequential device numbering
         }
     }
-
     return discovered;
 }
-
 
 /***********************************************************************
  * Make device instance
