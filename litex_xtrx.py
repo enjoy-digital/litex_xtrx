@@ -165,9 +165,16 @@ class BaseSoC(SoCCore):
 
         # PCIe -------------------------------------------------------------------------------------
         self.pcie_phy = S7PCIEPHY(platform, platform.request(f"pcie_x2"),
-            data_width = 64,
-            bar0_size  = 0x20000,
-            cd         = "sys",
+            data_width  = 64,
+            bar0_size   = 0x20000,
+            cd          = "sys",
+        )
+        self.pcie_phy.update_config({
+            "Base_Class_Menu"          : "Wireless_controller",
+            "Sub_Class_Interface_Menu" : "RF_controller",
+            "Class_Code_Base"          : "0D",
+            "Class_Code_Sub"           : "10",
+            }
         )
         self.add_pcie(phy=self.pcie_phy, address_width=32, ndmas=1,
             with_dma_buffering    = True, dma_buffering_depth=8192,
