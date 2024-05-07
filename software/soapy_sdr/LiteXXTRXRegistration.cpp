@@ -68,7 +68,8 @@ std::vector<SoapySDR::Kwargs> findLiteXXTRX(const SoapySDR::Kwargs &args) {
 
             // check the FPGA identification to see if this is an XTRX
             std::string fpga_identification = getLiteXXTRXIdentification(fd);
-            if (strstr(fpga_identification.c_str(), "LiteX SoC on Fairwaves XTRX") != NULL) {
+            if (strstr(fpga_identification.c_str(), "LiteX SoC on Fairwaves") != NULL ||
+                strstr(fpga_identification.c_str(), "LiteX SoC on Lime")      != NULL) {
                 // gather device info
                 SoapySDR::Kwargs dev(args);
                 dev["device"] = "LiteXXTRX";
