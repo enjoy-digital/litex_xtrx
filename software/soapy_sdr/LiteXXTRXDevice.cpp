@@ -656,6 +656,7 @@ void SoapyLiteXXTRX::setGain(int direction, size_t channel, const double value) 
             throw std::runtime_error("SoapyLiteXXTRX::setGain(" +
                                      std::to_string(value) + " dB) failed - ");
     } else {
+        _lms2->SetActiveChannel(chan);
         val = std::clamp(static_cast<int>(value + 12), 0, MAXIMUM_GAIN_VALUE - 1);
 
         unsigned int lna = LNATable.at(std::lround(val));
