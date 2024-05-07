@@ -93,7 +93,7 @@ def measure_delay( args, rate,
     time.sleep(0.5)
     tx_pulse = generate_cf32_pulse(num_tx_samps)
     tx_time_0 = int(sdr.getHardwareTime() + 0.1e9) #100ms
-    tx_time_0 = 0
+    #tx_time_0 = 0
     tx_flags = SOAPY_SDR_HAS_TIME | SOAPY_SDR_END_BURST
     #tx_flags = SOAPY_SDR_END_BURST
     #status = sdr.writeStream(tx_stream, [tx_pulse], len(tx_pulse), tx_flags, tx_time_0, 10000)
