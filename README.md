@@ -132,6 +132,13 @@ Found device 0
 [> Use Apps
 -----------
 
+#### [> PCIe Rescan
+
+```bash
+echo 1 | sudo tee /sys/bus/pci/devices/0000\:0x\:00.0/remove (get x with lspci)
+echo 1 | sudo tee /sys/bus/pci/rescan
+```bash
+
 #### [> LitePCIe Utils
 
 Identification
