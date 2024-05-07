@@ -242,6 +242,8 @@ class BaseSoC(SoCCore):
             tx_delay_init = 16,
             rx_delay_init = 16
         )
+        self.comb += self.pcie_dma0.source.connect(self.lms7002m.sink)
+        self.comb += self.lms7002m.source.connect(self.pcie_dma0.sink)
         platform.add_false_path_constraints(self.crg.cd_sys.clk, self.lms7002m.cd_rfic.clk)
 
         # Timing Constraints/False Paths -----------------------------------------------------------
