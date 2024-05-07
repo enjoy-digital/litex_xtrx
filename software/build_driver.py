@@ -24,4 +24,4 @@ def build_driver(path, cmake_options=""):
 run_command("cd kernel && make clean all")
 run_command("cd user   && make clean all")
 build_driver("lms7002m")
-build_driver("soapy_sdr", "-DCMAKE_INSTALL_PREFIX=/usr")
+build_driver("soapysdr", "-DCMAKE_INSTALL_PREFIX=/usr")
