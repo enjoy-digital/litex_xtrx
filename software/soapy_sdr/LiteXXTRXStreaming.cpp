@@ -330,59 +330,66 @@ void SoapyLiteXXTRX::releaseWriteBuffer(SoapySDR::Stream */*stream*/, size_t han
     checked_ioctl(_fd, LITEPCIE_IOCTL_MMAP_DMA_READER_UPDATE, &mmap_dma_update);
 }
 
-void deinterleave(const int8_t *src, void *dst, uint32_t len, std::string format, size_t offset)
-{
+void interleaveCS16(const int16_t *src, int8_t *dst, uint32_t len, size_t offset) {
+    int16_t *dst_int16 = reinterpret_cast<int16_t*>(dst) + (offset * 4);
+    const int16_t *samples_cs16 = src + (offset * BYTES_PER_SAMPLE);
+    for (uint32_t i = 0; i < len; i++) {
+        dst_int16[0] = samples_cs16[0]; /* I */
+        dst_int16[1] = samples_cs16[1]; /* Q */
+        samples_cs16 += 2;
+        dst_int16    += 4;
+    }
+}
+
+void interleaveCF32(const float *src, int8_t *dst, uint32_t len, size_t offset) {
+    int16_t *dst_int16 = reinterpret_cast<int16_t*>(dst) + (offset * 4);
+    const float *samples_cf32 = src + (offset * BYTES_PER_SAMPLE);
+    for (uint32_t i = 0; i < len; i++) {
+        dst_int16[0] = static_cast<int16_t>(samples_cf32[0] * 2047.0);  /* I */
+        dst_int16[1] = static_cast<int16_t>(samples_cf32[1] * 2047.0);  /* Q */
+        samples_cf32 += 2;
+        dst_int16    += 4;
+    }
+}
+
+void interleave(const void *src, void *dst, uint32_t len, const std::string &format, size_t offset) {
     if (format == SOAPY_SDR_CS16) {
-        int16_t *samples_cs16 = ((int16_t *)dst) + (offset * BYTES_PER_SAMPLE);
-        int16_t *src_int16 = (int16_t *)src;
-        for (uint32_t i = 0; i < len; i++)
-        {
-            samples_cs16[0] = src[0];
-            samples_cs16[1] = src[1];
-            samples_cs16 += 2;
-            src_int16 += 4;
-        }
-    }
-    else if (format == SOAPY_SDR_CF32) {
-        float *samples_cf32 = ((float *)dst) + (offset * 2);
-        int16_t *src_int16 = (int16_t *)src;
-        for (uint32_t i = 0; i < len; i ++)
-        {
-            samples_cf32[0] = (float)src_int16[i*4] / 2047.0;
-            samples_cf32[1] = (float)src_int16[i*4 + 1] / 2047.0;
-            samples_cf32 += 2;
-        }
-    }
-    else {
+        interleaveCS16(reinterpret_cast<const int16_t*>(src), reinterpret_cast<int8_t*>(dst), len, offset);
+    } else if (format == SOAPY_SDR_CF32) {
+        interleaveCF32(reinterpret_cast<const float*>(src), reinterpret_cast<int8_t*>(dst), len, offset);
+    } else {
         SoapySDR_logf(SOAPY_SDR_ERROR, "Unsupported format: %s", format.c_str());
     }
 }
 
-void interleave(const void *src, int8_t *dst, uint32_t len, std::string format, size_t offset)
-{
+void deinterleaveCS16(const int8_t *src, int16_t *dst, uint32_t len, size_t offset) {
+    int16_t *samples_cs16 = dst + (offset * BYTES_PER_SAMPLE);
+    const int16_t *src_int16 = reinterpret_cast<const int16_t*>(src);
+    for (uint32_t i = 0; i < len; i++) {
+        samples_cs16[0] = src_int16[0];  /* I */
+        samples_cs16[1] = src_int16[1];  /* Q */
+        samples_cs16 += 2;
+        src_int16    += 4;
+    }
+}
+
+void deinterleaveCF32(const int8_t *src, float *dst, uint32_t len, size_t offset) {
+    float *samples_cf32 = dst + (offset * BYTES_PER_SAMPLE);
+    const int16_t *src_int16 = reinterpret_cast<const int16_t*>(src);
+    for (uint32_t i = 0; i < len; i++) {
+        samples_cf32[0] = static_cast<float>(src_int16[0]) / 2047.0;  /* I */
+        samples_cf32[1] = static_cast<float>(src_int16[1]) / 2047.0;  /* Q */
+        samples_cf32 += 2;
+        src_int16    += 4;
+    }
+}
+
+void deinterleave(const void *src, void *dst, uint32_t len, const std::string &format, size_t offset) {
     if (format == SOAPY_SDR_CS16) {
-        int16_t *samples_cs16 = ((int16_t *)src) + offset * BYTES_PER_SAMPLE;
-        int16_t *dst_int16 = (int16_t *)dst;
-        for (uint32_t i = 0; i < len; i++)
-        {
-            dst_int16[0] = samples_cs16[0];
-            dst_int16[1] = samples_cs16[1];
-            samples_cs16 += 2;
-            dst_int16 += 4;
-        }
-    }
-    else if (format == SOAPY_SDR_CF32) {
-        float *samples_cf32 = ((float *)src) + (offset * 2);
-        int16_t *dst_int16 = (int16_t *)dst;
-        for (uint32_t i = 0; i < len; i++)
-        {
-            dst_int16[0] = (int16_t)(((float *)samples_cf32)[0] * 2047.0);
-            dst_int16[1] = (int16_t)(((float *)samples_cf32)[1] * 2047.0);
-            samples_cf32 += 2;
-            dst_int16 += 4;
-        }
-    }
-    else {
+        deinterleaveCS16(reinterpret_cast<const int8_t*>(src), reinterpret_cast<int16_t*>(dst), len, offset);
+    } else if (format == SOAPY_SDR_CF32) {
+        deinterleaveCF32(reinterpret_cast<const int8_t*>(src), reinterpret_cast<float*>(dst), len, offset);
+    } else {
         SoapySDR_logf(SOAPY_SDR_ERROR, "Unsupported format: %s", format.c_str());
     }
 }
