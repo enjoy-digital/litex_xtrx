@@ -863,6 +863,14 @@ std::vector<std::string> SoapyLiteXXTRX::getStreamFormats(const int /*direction*
 
 void SoapyLiteXXTRX::setBandwidth(const int direction, const size_t channel,
                              const double bw) {
+    if (bw == 0.0)
+        return;
+    double &actualBw = _cachedFilterBws[direction][channel];
+    double lpf = bw;
+    double newLPF;
+    if (lpf < 0)
+        lpf = actualBw;
+
     std::lock_guard<std::mutex> lock(_mutex);
 
     SoapySDR::logf(SOAPY_SDR_DEBUG, "SoapyLiteXXTRX::setBandwidth(%s, ch%d, %f MHz)",
@@ -871,22 +879,35 @@ void SoapyLiteXXTRX::setBandwidth(const int direction, const size_t channel,
     lime::OpStatus ret = lime::OpStatus::Success;
     const lime::LMS7002M::Channel chan = channel > 0 ? lime::LMS7002M::Channel::ChB : lime::LMS7002M::Channel::ChA;
     _lms2->SetActiveChannel(chan);
-    double &actualBw = _cachedFilterBws[direction][channel];
-    if (direction == SOAPY_SDR_RX) {
-        ret = _lms2->CalibrateRx(bw, false);
-        if (ret == lime::OpStatus::Success)
-            actualBw = bw;
-    }
-    if (direction == SOAPY_SDR_TX) {
-        ret = _lms2->CalibrateTx(bw, false);
-        if (ret == lime::OpStatus::Success)
-            actualBw = bw;
+
+    if (direction == SOAPY_SDR_RX)
+        newLPF = std::clamp(lpf, 1.4001e6, 130e6);
+    else
+        newLPF = std::clamp(lpf, 5e6, 130e6);
+
+    if (newLPF != lpf) {
+        SoapySDR::logf(SOAPY_SDR_INFO,
+            "SoapyLiteXXTRX::setBandwidth %cXLPF set to %.3f MHz (requested %0.3f MHz [out of range])",
+            direction == SOAPY_SDR_TX ? 'T' : 'R', newLPF / 1e6, lpf / 1e6);
     }
 
-    if (ret != lime::OpStatus::Success)
+    lpf = newLPF;
+
+    if (direction == SOAPY_SDR_TX) {
+        int gain = _lms2->GetTBBIAMP_dB(chan);
+        ret  = _lms2->SetTxLPF(lpf);
+        _lms2->SetTBBIAMP_dB(gain, chan);
+    } else {
+        ret = _lms2->SetRxLPF(lpf);
+    }
+
+    if (ret != lime::OpStatus::Success) {
         throw std::runtime_error("SoapyLiteXXTRX::setBandwidth(" +
                                  std::to_string(bw / 1e6) + " MHz) failed - " +
                                  "");
+    }
+
+    actualBw = lpf;
 }
 
 double SoapyLiteXXTRX::getBandwidth(const int direction,
