@@ -55,15 +55,15 @@ class CRG(LiteXModule):
 
         # # #
 
-        # Clk/Rst.
-        assert sys_clk_freq == int(125e6)
-        self.comb += self.cd_sys.clk.eq(ClockSignal("pcie"))
-        self.comb += self.cd_sys.rst.eq(ResetSignal("pcie"))
+        # Clk / Rst.
+        clk125 = ClockSignal("pcie")
+        rst125 = ResetSignal("pcie")
 
         # PLL.
         self.pll = pll = S7PLL(speedgrade=-1)
-        self.comb += pll.reset.eq(ResetSignal("pcie"))
-        pll.register_clkin(ClockSignal("pcie"), 125e6)
+        self.comb += pll.reset.eq(rst125)
+        pll.register_clkin(clk125, 125e6)
+        pll.create_clkout(self.cd_sys,    sys_clk_freq)
         pll.create_clkout(self.cd_idelay, 200e6)
 
         # IDelayCtrl.
@@ -167,8 +167,7 @@ class BaseSoC(SoCCore):
         self.pcie_phy = S7PCIEPHY(platform, platform.request(f"pcie_x2"),
             data_width = 64,
             bar0_size  = 0x20000,
-            cd         = "pcie"
-            #cd         = "sys"
+            cd         = "sys",
         )
         self.add_pcie(phy=self.pcie_phy, address_width=32, ndmas=1,
             with_dma_buffering    = True, dma_buffering_depth=8192,
