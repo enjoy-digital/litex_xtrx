@@ -721,6 +721,10 @@ void SoapyLiteXXTRX::setGain(const int direction, const size_t channel,
         ret = _lms2->SetTRFLoopbackPAD_dB(value, chan);
         actualValue = _lms2->GetTRFLoopbackPAD_dB(chan);
     }
+
+    if (ret == lime::OpStatus::Error)
+        throw std::runtime_error("SoapyLiteXXTRX::setGain(" +
+                                 std::to_string(value) + " dB) failed - ");
 }
 
 double SoapyLiteXXTRX::getGain(const int direction, const size_t channel,
