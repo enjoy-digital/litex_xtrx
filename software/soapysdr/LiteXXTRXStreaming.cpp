@@ -16,113 +16,123 @@
 
 #include "LiteXXTRXDevice.hpp"
 
+/* Setup and configure a stream for RX or TX. */
 SoapySDR::Stream *SoapyLiteXXTRX::setupStream(const int direction,
-                                         const std::string &format,
-                                         const std::vector<size_t> &channels,
-                                         const SoapySDR::Kwargs &/*args*/) {
+                                              const std::string &format,
+                                              const std::vector<size_t> &channels,
+                                              const SoapySDR::Kwargs &/*args*/) {
     std::lock_guard<std::mutex> lock(_mutex);
 
     if (direction == SOAPY_SDR_RX) {
-        if (_rx_stream.opened)
-            throw std::runtime_error("RX stream already opened");
+        if (_rx_stream.opened) {
+            throw std::runtime_error("RX stream already opened.");
+        }
 
-        // configure the file descriptor watcher
+        /* Configure the file descriptor watcher. */
         _rx_stream.fds.fd = _fd;
         _rx_stream.fds.events = POLLIN;
 
-        // initialize the DMA engine
-        if ((litepcie_request_dma(_fd, 0, 1) == 0))
-            throw std::runtime_error("DMA not available");
+        /* Initialize the DMA engine. */
+        if ((litepcie_request_dma(_fd, 0, 1) == 0)) {
+            throw std::runtime_error("DMA not available.");
+        }
 
-        // mmap the DMA buffers
+        /* Memory-map the DMA buffers. */
         _rx_stream.buf = mmap(NULL,
-                              _dma_mmap_info.dma_rx_buf_count *
-                                  _dma_mmap_info.dma_rx_buf_size,
+                              _dma_mmap_info.dma_rx_buf_count * _dma_mmap_info.dma_rx_buf_size,
                               PROT_READ | PROT_WRITE, MAP_SHARED, _fd,
                               _dma_mmap_info.dma_rx_buf_offset);
-        if (_rx_stream.buf == MAP_FAILED)
-            throw std::runtime_error("MMAP failed");
+        if (_rx_stream.buf == MAP_FAILED) {
+            throw std::runtime_error("MMAP failed.");
+        }
 
-        // make sure the DMA is disabled, or counters could be in a bad state
+        /* Ensure the DMA is disabled initially to avoid counters being in a bad state. */
         litepcie_dma_writer(_fd, 0, &_rx_stream.hw_count, &_rx_stream.sw_count);
 
         _rx_stream.opened = true;
-
         _rx_stream.format = format;
 
-        if (channels.empty())
+        /* Set channels to 0 and 1 if none are provided. */
+        if (channels.empty()) {
             _rx_stream.channels = {0, 1};
-        else
+        } else {
             _rx_stream.channels = channels;
+        }
 
         return RX_STREAM;
     } else if (direction == SOAPY_SDR_TX) {
-        if (_tx_stream.opened)
-            throw std::runtime_error("TX stream already opened");
+        if (_tx_stream.opened) {
+            throw std::runtime_error("TX stream already opened.");
+        }
 
-        // configure the file descriptor watcher
+        /* Configure the file descriptor watcher. */
         _tx_stream.fds.fd = _fd;
         _tx_stream.fds.events = POLLOUT;
 
-        // initialize the DMA engine
-        if ((litepcie_request_dma(_fd, 1, 0) == 0))
-            throw std::runtime_error("DMA not available");
+        /* Initialize the DMA engine. */
+        if ((litepcie_request_dma(_fd, 1, 0) == 0)) {
+            throw std::runtime_error("DMA not available.");
+        }
 
-        // mmap the DMA buffers
-        _tx_stream.buf = mmap(
-            NULL,
-            _dma_mmap_info.dma_tx_buf_count * _dma_mmap_info.dma_tx_buf_size,
-            PROT_WRITE, MAP_SHARED, _fd, _dma_mmap_info.dma_tx_buf_offset);
-        if (_tx_stream.buf == MAP_FAILED)
-            throw std::runtime_error("MMAP failed");
+        /* Memory-map the DMA buffers. */
+        _tx_stream.buf = mmap(NULL,
+                              _dma_mmap_info.dma_tx_buf_count * _dma_mmap_info.dma_tx_buf_size,
+                              PROT_WRITE, MAP_SHARED, _fd,
+                              _dma_mmap_info.dma_tx_buf_offset);
+        if (_tx_stream.buf == MAP_FAILED) {
+            throw std::runtime_error("MMAP failed.");
+        }
 
-        // make sure the DMA is disabled, or counters could be in a bad state
+        /* Ensure the DMA is disabled initially to avoid counters being in a bad state. */
         litepcie_dma_reader(_fd, 0, &_tx_stream.hw_count, &_tx_stream.sw_count);
 
         _tx_stream.opened = true;
-
         _tx_stream.format = format;
 
-        if (channels.empty())
+        /* Set channels to 0 and 1 if none are provided. */
+        if (channels.empty()) {
             _tx_stream.channels = {0, 1};
-        else
+        } else {
             _tx_stream.channels = channels;
+        }
 
         return TX_STREAM;
     } else {
-        throw std::runtime_error("Invalid direction");
+        throw std::runtime_error("Invalid direction.");
     }
 }
 
+/* Close the specified stream and release associated resources. */
 void SoapyLiteXXTRX::closeStream(SoapySDR::Stream *stream) {
     std::lock_guard<std::mutex> lock(_mutex);
 
     if (stream == RX_STREAM) {
-        // release the DMA engine
+        /* Release the DMA engine. */
         litepcie_release_dma(_fd, 0, 1);
 
-        munmap(_rx_stream.buf, _dma_mmap_info.dma_rx_buf_size *
-                                   _dma_mmap_info.dma_rx_buf_count);
+        munmap(_rx_stream.buf,
+               _dma_mmap_info.dma_rx_buf_size * _dma_mmap_info.dma_rx_buf_count);
         _rx_stream.opened = false;
     } else if (stream == TX_STREAM) {
-        // release the DMA engine
+        /* Release the DMA engine. */
         litepcie_release_dma(_fd, 1, 0);
 
-        munmap(_tx_stream.buf, _dma_mmap_info.dma_tx_buf_size *
-                                   _dma_mmap_info.dma_tx_buf_count);
+        munmap(_tx_stream.buf,
+               _dma_mmap_info.dma_tx_buf_size * _dma_mmap_info.dma_tx_buf_count);
         _tx_stream.opened = false;
     }
 }
 
+/* Activate the specified stream (enable DMA engine). */
 int SoapyLiteXXTRX::activateStream(SoapySDR::Stream *stream, const int /*flags*/,
-                              const long long /*timeNs*/,
-                              const size_t /*numElems*/) {
+                                   const long long /*timeNs*/,
+                                   const size_t /*numElems*/) {
     if (stream == RX_STREAM) {
-        // enable the DMA engine
+        /* Enable the DMA engine for RX. */
         litepcie_dma_writer(_fd, 1, &_rx_stream.hw_count, &_rx_stream.sw_count);
         _rx_stream.user_count = 0;
     } else if (stream == TX_STREAM) {
-        // enable the DMA engine
+        /* Enable the DMA engine for TX. */
         litepcie_dma_reader(_fd, 1, &_tx_stream.hw_count, &_tx_stream.sw_count);
         _tx_stream.user_count = 0;
     }
@@ -130,53 +140,56 @@ int SoapyLiteXXTRX::activateStream(SoapySDR::Stream *stream, const int /*flags*/
     return 0;
 }
 
+/* Deactivate the specified stream (disable DMA engine). */
 int SoapyLiteXXTRX::deactivateStream(SoapySDR::Stream *stream, const int /*flags*/,
-                                const long long /*timeNs*/) {
+                                     const long long /*timeNs*/) {
     if (stream == RX_STREAM) {
-        // disable the DMA engine
+        /* Disable the DMA engine for RX. */
         litepcie_dma_writer(_fd, 0, &_rx_stream.hw_count, &_rx_stream.sw_count);
     } else if (stream == TX_STREAM) {
-        // disable the DMA engine
+        /* Disable the DMA engine for TX. */
         litepcie_dma_reader(_fd, 0, &_tx_stream.hw_count, &_tx_stream.sw_count);
     }
     return 0;
 }
 
-
 /*******************************************************************
  * Direct buffer API
  ******************************************************************/
 
+/* Retrieve the maximum transmission unit (MTU) for a stream. */
 size_t SoapyLiteXXTRX::getStreamMTU(SoapySDR::Stream *stream) const {
-    if (stream == RX_STREAM)
-        // each sample is 2 * Complex{Int16}
-        return _dma_mmap_info.dma_rx_buf_size/(2*2*sizeof(int16_t));
-    else if (stream == TX_STREAM)
-        return _dma_mmap_info.dma_tx_buf_size/(2*2*sizeof(int16_t));
-    else
-        throw std::runtime_error("SoapySDR::getStreamMTU(): invalid stream");
+    if (stream == RX_STREAM) {
+        /* Each sample is 2 * Complex{Int16}. */
+        return _dma_mmap_info.dma_rx_buf_size / (2 * 2 * sizeof(int16_t));
+    } else if (stream == TX_STREAM) {
+        return _dma_mmap_info.dma_tx_buf_size / (2 * 2 * sizeof(int16_t));
+    } else {
+        throw std::runtime_error("SoapySDR::getStreamMTU(): Invalid stream.");
+    }
 }
 
+/* Retrieve the number of direct access buffers available for a stream. */
 size_t SoapyLiteXXTRX::getNumDirectAccessBuffers(SoapySDR::Stream *stream) {
-    if (stream == RX_STREAM)
+    if (stream == RX_STREAM) {
         return _dma_mmap_info.dma_rx_buf_count;
-    else if (stream == TX_STREAM)
+    } else if (stream == TX_STREAM) {
         return _dma_mmap_info.dma_tx_buf_count;
-    else
-        throw std::runtime_error("SoapySDR::getNumDirectAccessBuffers(): invalid stream");
+    } else {
+        throw std::runtime_error("SoapySDR::getNumDirectAccessBuffers(): Invalid stream.");
+    }
 }
 
+/* Retrieve buffer addresses for a direct access buffer. */
 int SoapyLiteXXTRX::getDirectAccessBufferAddrs(SoapySDR::Stream *stream,
-                                          const size_t handle, void **buffs) {
-    if (stream == RX_STREAM)
-        buffs[0] =
-            (char *)_rx_stream.buf + handle * _dma_mmap_info.dma_rx_buf_size;
-    else if (stream == TX_STREAM)
-        buffs[0] =
-            (char *)_tx_stream.buf + handle * _dma_mmap_info.dma_tx_buf_size;
-    else
-        throw std::runtime_error(
-            "SoapySDR::getDirectAccessBufferAddrs(): invalid stream");
+                                               const size_t handle, void **buffs) {
+    if (stream == RX_STREAM) {
+        buffs[0] = (char *)_rx_stream.buf + handle * _dma_mmap_info.dma_rx_buf_size;
+    } else if (stream == TX_STREAM) {
+        buffs[0] = (char *)_tx_stream.buf + handle * _dma_mmap_info.dma_tx_buf_size;
+    } else {
+        throw std::runtime_error("SoapySDR::getDirectAccessBufferAddrs(): Invalid stream.");
+    }
     return 0;
 }
 
@@ -197,46 +210,47 @@ int SoapyLiteXXTRX::getDirectAccessBufferAddrs(SoapySDR::Stream *stream,
 #define DETECT_EVERY_OVERFLOW  true
 #define DETECT_EVERY_UNDERFLOW true
 
+/* Acquire a buffer for reading. */
 int SoapyLiteXXTRX::acquireReadBuffer(SoapySDR::Stream *stream, size_t &handle,
-                                 const void **buffs, int &flags,
-                                 long long &/*timeNs*/, const long timeoutUs) {
-    if (stream != RX_STREAM)
+                                      const void **buffs, int &flags,
+                                      long long &/*timeNs*/, const long timeoutUs) {
+    if (stream != RX_STREAM) {
         return SOAPY_SDR_STREAM_ERROR;
+    }
 
-    // check if there are buffers available
+    /* Check if there are buffers available. */
     int buffers_available = _rx_stream.hw_count - _rx_stream.user_count;
     assert(buffers_available >= 0);
 
-    // if not, check with the DMA engine
+    /* If not, check with the DMA engine. */
     if (buffers_available == 0 || DETECT_EVERY_OVERFLOW) {
         litepcie_dma_writer(_fd, 1, &_rx_stream.hw_count, &_rx_stream.sw_count);
         buffers_available = _rx_stream.hw_count - _rx_stream.user_count;
     }
 
-    // if not, wait for new buffers to arrive
+    /* If no buffers available, wait for new buffers to arrive. */
     if (buffers_available == 0) {
         if (timeoutUs == 0) {
             return SOAPY_SDR_TIMEOUT;
         }
         int ret = poll(&_rx_stream.fds, 1, timeoutUs / 1000);
-        if (ret < 0)
-            throw std::runtime_error(
-                "SoapyLiteXXTRX::acquireReadBuffer(): poll failed, " +
-                std::string(strerror(errno)));
-        else if (ret == 0) {
+        if (ret < 0) {
+            throw std::runtime_error("SoapyLiteXXTRX::acquireReadBuffer(): Poll failed, " +
+                                     std::string(strerror(errno)) + ".");
+        } else if (ret == 0) {
             return SOAPY_SDR_TIMEOUT;
         }
 
-        // get new DMA counters
+        /* Get new DMA counters. */
         litepcie_dma_writer(_fd, 1, &_rx_stream.hw_count, &_rx_stream.sw_count);
         buffers_available = _rx_stream.hw_count - _rx_stream.user_count;
         assert(buffers_available > 0);
     }
 
-    // detect overflows of the underlying circular buffer
+    /* Detect overflows of the underlying circular buffer. */
     if ((_rx_stream.hw_count - _rx_stream.sw_count) >
         ((int64_t)_dma_mmap_info.dma_rx_buf_count / 2)) {
-        // drain all buffers to get out of the overflow quicker
+        /* Drain all buffers to get out of the overflow quicker. */
         struct litepcie_ioctl_mmap_dma_update mmap_dma_update;
         mmap_dma_update.sw_count = _rx_stream.hw_count;
         checked_ioctl(_fd, LITEPCIE_IOCTL_MMAP_DMA_WRITER_UPDATE, &mmap_dma_update);
@@ -247,11 +261,11 @@ int SoapyLiteXXTRX::acquireReadBuffer(SoapySDR::Stream *stream, size_t &handle,
         flags |= SOAPY_SDR_END_ABRUPT;
         return SOAPY_SDR_OVERFLOW;
     } else {
-        // get the buffer
+        /* Get the buffer. */
         int buf_offset = _rx_stream.user_count % _dma_mmap_info.dma_rx_buf_count;
         getDirectAccessBufferAddrs(stream, buf_offset, (void **)buffs);
 
-        // update the DMA counters
+        /* Update the DMA counters. */
         handle = _rx_stream.user_count;
         _rx_stream.user_count++;
 
@@ -259,59 +273,61 @@ int SoapyLiteXXTRX::acquireReadBuffer(SoapySDR::Stream *stream, size_t &handle,
     }
 }
 
+/* Release a read buffer after use. */
 void SoapyLiteXXTRX::releaseReadBuffer(SoapySDR::Stream */*stream*/, size_t handle) {
-    assert(handle != (size_t)-1 && "Attempt to release an invalid buffer (e.g., from an overflow)");
+    assert(handle != (size_t)-1 && "Attempt to release an invalid buffer (e.g., from an overflow).");
 
-    // update the DMA counters
+    /* Update the DMA counters. */
     struct litepcie_ioctl_mmap_dma_update mmap_dma_update;
     mmap_dma_update.sw_count = handle + 1;
     checked_ioctl(_fd, LITEPCIE_IOCTL_MMAP_DMA_WRITER_UPDATE, &mmap_dma_update);
 }
 
+/* Acquire a buffer for writing. */
 int SoapyLiteXXTRX::acquireWriteBuffer(SoapySDR::Stream *stream, size_t &handle,
-                                  void **buffs, const long timeoutUs) {
-    if (stream != TX_STREAM)
+                                       void **buffs, const long timeoutUs) {
+    if (stream != TX_STREAM) {
         return SOAPY_SDR_STREAM_ERROR;
+    }
 
-    // check if there are buffers available
+    /* Check if there are buffers available. */
     int buffers_pending = _tx_stream.user_count - _tx_stream.hw_count;
     assert(buffers_pending <= (int)_dma_mmap_info.dma_tx_buf_count);
 
-    // if not, check with the DMA engine
-    if (buffers_pending == ((int64_t)_dma_mmap_info.dma_tx_buf_count) ||
-        DETECT_EVERY_UNDERFLOW) {
+    /* If not, check with the DMA engine. */
+    if (buffers_pending == ((int64_t)_dma_mmap_info.dma_tx_buf_count) || DETECT_EVERY_UNDERFLOW) {
         litepcie_dma_reader(_fd, 1, &_tx_stream.hw_count, &_tx_stream.sw_count);
         buffers_pending = _tx_stream.user_count - _tx_stream.hw_count;
     }
 
-    // if not, wait for new buffers to become available
+    /* If no buffers available, wait for new buffers to become available. */
     if (buffers_pending == ((int64_t)_dma_mmap_info.dma_tx_buf_count)) {
         if (timeoutUs == 0) {
             return SOAPY_SDR_TIMEOUT;
         }
         int ret = poll(&_tx_stream.fds, 1, timeoutUs / 1000);
-        if (ret < 0)
-            throw std::runtime_error(
-                "SoapyLiteXXTRX::acquireWriteBuffer(): poll failed, " +
-                std::string(strerror(errno)));
-        else if (ret == 0)
+        if (ret < 0) {
+            throw std::runtime_error("SoapyLiteXXTRX::acquireWriteBuffer(): Poll failed, " +
+                                     std::string(strerror(errno)) + ".");
+        } else if (ret == 0) {
             return SOAPY_SDR_TIMEOUT;
+        }
 
-        // get new DMA counters
+        /* Get new DMA counters. */
         litepcie_dma_reader(_fd, 1, &_tx_stream.hw_count, &_tx_stream.sw_count);
         buffers_pending = _tx_stream.user_count - _tx_stream.hw_count;
         assert(buffers_pending < ((int64_t)_dma_mmap_info.dma_tx_buf_count));
     }
 
-    // get the buffer
+    /* Get the buffer. */
     int buf_offset = _tx_stream.user_count % _dma_mmap_info.dma_tx_buf_count;
     getDirectAccessBufferAddrs(stream, buf_offset, buffs);
 
-    // update the DMA counters
+    /* Update the DMA counters. */
     handle = _tx_stream.user_count;
     _tx_stream.user_count++;
 
-    // detect underflows
+    /* Detect underflows. */
     if (buffers_pending < 0) {
         return SOAPY_SDR_UNDERFLOW;
     } else {
@@ -319,136 +335,140 @@ int SoapyLiteXXTRX::acquireWriteBuffer(SoapySDR::Stream *stream, size_t &handle,
     }
 }
 
+/* Release a write buffer after use. */
 void SoapyLiteXXTRX::releaseWriteBuffer(SoapySDR::Stream */*stream*/, size_t handle,
-                                   const size_t /*numElems*/, int &/*flags*/,
-                                   const long long /*timeNs*/) {
-    // XXX: inspect user-provided numElems and flags, and act upon them?
+                                        const size_t /*numElems*/, int &/*flags*/,
+                                        const long long /*timeNs*/) {
+    /* XXX: Inspect user-provided numElems and flags, and act upon them? */
 
-    // update the DMA counters so that the engine can submit this buffer
+    /* Update the DMA counters so that the engine can submit this buffer. */
     struct litepcie_ioctl_mmap_dma_update mmap_dma_update;
     mmap_dma_update.sw_count = handle + 1;
     checked_ioctl(_fd, LITEPCIE_IOCTL_MMAP_DMA_READER_UPDATE, &mmap_dma_update);
 }
 
+/* Interleave CS16 samples. */
 void interleaveCS16(const int16_t *src, int8_t *dst, uint32_t len, size_t offset) {
     int16_t *dst_int16 = reinterpret_cast<int16_t*>(dst) + (offset * 4);
     const int16_t *samples_cs16 = src + (offset * BYTES_PER_SAMPLE);
     for (uint32_t i = 0; i < len; i++) {
-        dst_int16[0] = samples_cs16[0]; /* I */
-        dst_int16[1] = samples_cs16[1]; /* Q */
+        dst_int16[0] = samples_cs16[0]; /* I. */
+        dst_int16[1] = samples_cs16[1]; /* Q. */
         samples_cs16 += 2;
-        dst_int16    += 4;
+        dst_int16 += 4;
     }
 }
 
+/* Interleave CF32 samples. */
 void interleaveCF32(const float *src, int8_t *dst, uint32_t len, size_t offset) {
     int16_t *dst_int16 = reinterpret_cast<int16_t*>(dst) + (offset * 4);
     const float *samples_cf32 = src + (offset * BYTES_PER_SAMPLE);
     for (uint32_t i = 0; i < len; i++) {
-        dst_int16[0] = static_cast<int16_t>(samples_cf32[0] * 2047.0);  /* I */
-        dst_int16[1] = static_cast<int16_t>(samples_cf32[1] * 2047.0);  /* Q */
+        dst_int16[0] = static_cast<int16_t>(samples_cf32[0] * 2047.0); /* I. */
+        dst_int16[1] = static_cast<int16_t>(samples_cf32[1] * 2047.0); /* Q. */
         samples_cf32 += 2;
-        dst_int16    += 4;
+        dst_int16 += 4;
     }
 }
 
+/* Generic interleave function. */
 void interleave(const void *src, void *dst, uint32_t len, const std::string &format, size_t offset) {
     if (format == SOAPY_SDR_CS16) {
         interleaveCS16(reinterpret_cast<const int16_t*>(src), reinterpret_cast<int8_t*>(dst), len, offset);
     } else if (format == SOAPY_SDR_CF32) {
         interleaveCF32(reinterpret_cast<const float*>(src), reinterpret_cast<int8_t*>(dst), len, offset);
     } else {
-        SoapySDR_logf(SOAPY_SDR_ERROR, "Unsupported format: %s", format.c_str());
+        SoapySDR_logf(SOAPY_SDR_ERROR, "Unsupported format: %s.", format.c_str());
     }
 }
 
+/* Deinterleave CS16 samples. */
 void deinterleaveCS16(const int8_t *src, int16_t *dst, uint32_t len, size_t offset) {
     int16_t *samples_cs16 = dst + (offset * BYTES_PER_SAMPLE);
     const int16_t *src_int16 = reinterpret_cast<const int16_t*>(src);
     for (uint32_t i = 0; i < len; i++) {
-        samples_cs16[0] = src_int16[0];  /* I */
-        samples_cs16[1] = src_int16[1];  /* Q */
+        samples_cs16[0] = src_int16[0]; /* I. */
+        samples_cs16[1] = src_int16[1]; /* Q. */
         samples_cs16 += 2;
-        src_int16    += 4;
+        src_int16 += 4;
     }
 }
 
+/* Deinterleave CF32 samples. */
 void deinterleaveCF32(const int8_t *src, float *dst, uint32_t len, size_t offset) {
     float *samples_cf32 = dst + (offset * BYTES_PER_SAMPLE);
     const int16_t *src_int16 = reinterpret_cast<const int16_t*>(src);
     for (uint32_t i = 0; i < len; i++) {
-        samples_cf32[0] = static_cast<float>(src_int16[0]) / 2047.0;  /* I */
-        samples_cf32[1] = static_cast<float>(src_int16[1]) / 2047.0;  /* Q */
+        samples_cf32[0] = static_cast<float>(src_int16[0]) / 2047.0; /* I. */
+        samples_cf32[1] = static_cast<float>(src_int16[1]) / 2047.0; /* Q. */
         samples_cf32 += 2;
-        src_int16    += 4;
+        src_int16 += 4;
     }
 }
 
+/* Generic deinterleave function. */
 void deinterleave(const void *src, void *dst, uint32_t len, const std::string &format, size_t offset) {
     if (format == SOAPY_SDR_CS16) {
         deinterleaveCS16(reinterpret_cast<const int8_t*>(src), reinterpret_cast<int16_t*>(dst), len, offset);
     } else if (format == SOAPY_SDR_CF32) {
         deinterleaveCF32(reinterpret_cast<const int8_t*>(src), reinterpret_cast<float*>(dst), len, offset);
     } else {
-        SoapySDR_logf(SOAPY_SDR_ERROR, "Unsupported format: %s", format.c_str());
+        SoapySDR_logf(SOAPY_SDR_ERROR, "Unsupported format: %s.", format.c_str());
     }
 }
 
-int SoapyLiteXXTRX::readStream(
-    SoapySDR::Stream *stream,
-    void *const *buffs,
-    const size_t numElems,
-    int &flags,
-    long long &timeNs,
-    const long timeoutUs)
-{
-    if (stream != RX_STREAM)
-    {
+/* Read from the RX stream. */
+int SoapyLiteXXTRX::readStream(SoapySDR::Stream *stream,
+                               void *const *buffs,
+                               const size_t numElems,
+                               int &flags,
+                               long long &timeNs,
+                               const long timeoutUs) {
+    if (stream != RX_STREAM) {
         return SOAPY_SDR_NOT_SUPPORTED;
     }
+
+    /* Determine the number of samples to return, respecting the MTU. */
     size_t returnedElems = std::min(numElems, this->getStreamMTU(stream));
     const uint32_t cplx_size = BYTES_PER_SAMPLE * 2;
 
     size_t samp_avail = 0;
 
-    if (_rx_stream.remainderHandle >= 0)
-    {
+    /* If there's a remainder buffer from a previous read, process that first. */
+    if (_rx_stream.remainderHandle >= 0) {
         const size_t n = std::min(_rx_stream.remainderSamps, returnedElems);
         const uint32_t remainderOffset = _tx_stream.remainderOffset * cplx_size * 2;
 
-        if (n < returnedElems)
-        {
+        if (n < returnedElems) {
             samp_avail = n;
         }
 
-        // Read out channels
-        for (size_t i = 0; i < _rx_stream.channels.size(); i++)
-        {
-            const uint32_t chan =_rx_stream.channels[i];
+        /* Read out channels from the remainder buffer. */
+        for (size_t i = 0; i < _rx_stream.channels.size(); i++) {
+            const uint32_t chan = _rx_stream.channels[i];
             deinterleave(_rx_stream.remainderBuff + (remainderOffset + chan * cplx_size),
-                buffs[i], n, _rx_stream.format, 0);
+                         buffs[i], n, _rx_stream.format, 0);
         }
         _rx_stream.remainderSamps -= n;
         _rx_stream.remainderOffset += n;
 
-        if (_rx_stream.remainderSamps == 0)
-        {
+        if (_rx_stream.remainderSamps == 0) {
             this->releaseReadBuffer(stream, _rx_stream.remainderHandle);
             _rx_stream.remainderHandle = -1;
             _rx_stream.remainderOffset = 0;
         }
 
-        if (n == returnedElems)
+        if (n == returnedElems) {
             return returnedElems;
+        }
     }
 
+    /* Acquire a new read buffer from the DMA engine. */
     size_t handle;
     int ret = this->acquireReadBuffer(stream, handle, (const void **)&_rx_stream.remainderBuff, flags, timeNs, timeoutUs);
 
-    if (ret < 0)
-    {
-        if ((ret == SOAPY_SDR_TIMEOUT) && (samp_avail > 0))
-        {
+    if (ret < 0) {
+        if ((ret == SOAPY_SDR_TIMEOUT) && (samp_avail > 0)) {
             return samp_avail;
         }
         return ret;
@@ -459,18 +479,16 @@ int SoapyLiteXXTRX::readStream(
 
     const size_t n = std::min((returnedElems - samp_avail), _rx_stream.remainderSamps);
 
-    // Read out channels
-    for (size_t i = 0; i < _rx_stream.channels.size(); i++)
-    {
+    /* Read out channels from the new buffer. */
+    for (size_t i = 0; i < _rx_stream.channels.size(); i++) {
         const uint32_t chan = _rx_stream.channels[i];
         deinterleave(_rx_stream.remainderBuff + (chan * cplx_size),
-            buffs[i], n, _rx_stream.format, samp_avail);
+                     buffs[i], n, _rx_stream.format, samp_avail);
     }
     _rx_stream.remainderSamps -= n;
     _rx_stream.remainderOffset += n;
 
-    if (_rx_stream.remainderSamps == 0)
-    {
+    if (_rx_stream.remainderSamps == 0) {
         this->releaseReadBuffer(stream, _rx_stream.remainderHandle);
         _rx_stream.remainderHandle = -1;
         _rx_stream.remainderOffset = 0;
@@ -479,62 +497,57 @@ int SoapyLiteXXTRX::readStream(
     return returnedElems;
 }
 
-int SoapyLiteXXTRX::writeStream(
-    SoapySDR::Stream *stream,
-    const void *const *buffs,
-    const size_t numElems,
-    int &flags,
-    const long long timeNs,
-    const long timeoutUs)
-{
-    if (stream != TX_STREAM)
-    {
+/* Write to the TX stream. */
+int SoapyLiteXXTRX::writeStream(SoapySDR::Stream *stream,
+                                const void *const *buffs,
+                                const size_t numElems,
+                                int &flags,
+                                const long long timeNs,
+                                const long timeoutUs) {
+    if (stream != TX_STREAM) {
         return SOAPY_SDR_NOT_SUPPORTED;
     }
 
+    /* Determine the number of samples to return, respecting the MTU. */
     size_t returnedElems = std::min(numElems, this->getStreamMTU(stream));
     const uint32_t cplx_size = BYTES_PER_SAMPLE * 2;
 
     size_t samp_avail = 0;
 
-    if (_tx_stream.remainderHandle >= 0)
-    {
-
+    /* If there's a remainder buffer from a previous write, process that first. */
+    if (_tx_stream.remainderHandle >= 0) {
         const size_t n = std::min(_tx_stream.remainderSamps, returnedElems);
         const uint32_t remainderOffset = _tx_stream.remainderOffset * cplx_size * 2;
 
-        if (n < returnedElems)
-        {
+        if (n < returnedElems) {
             samp_avail = n;
         }
 
-        // Write out channels
-        for (size_t i = 0; i < _tx_stream.channels.size(); i++)
-        {
+        /* Write out channels to the remainder buffer. */
+        for (size_t i = 0; i < _tx_stream.channels.size(); i++) {
             interleave(buffs[i], _tx_stream.remainderBuff + remainderOffset + ((cplx_size * _tx_stream.channels[i])),
-                n, _tx_stream.format, 0);
+                       n, _tx_stream.format, 0);
         }
         _tx_stream.remainderSamps -= n;
         _tx_stream.remainderOffset += n;
 
-        if (_tx_stream.remainderSamps == 0)
-        {
+        if (_tx_stream.remainderSamps == 0) {
             this->releaseWriteBuffer(stream, _tx_stream.remainderHandle, _tx_stream.remainderOffset, flags, timeNs);
             _tx_stream.remainderHandle = -1;
             _tx_stream.remainderOffset = 0;
         }
 
-        if (n == returnedElems)
+        if (n == returnedElems) {
             return returnedElems;
+        }
     }
 
+    /* Acquire a new write buffer from the DMA engine. */
     size_t handle;
 
     int ret = this->acquireWriteBuffer(stream, handle, (void **)&_tx_stream.remainderBuff, timeoutUs);
-    if (ret < 0)
-    {
-        if ((ret == SOAPY_SDR_TIMEOUT) && (samp_avail > 0))
-        {
+    if (ret < 0) {
+        if ((ret == SOAPY_SDR_TIMEOUT) && (samp_avail > 0)) {
             return samp_avail;
         }
         return ret;
@@ -545,17 +558,14 @@ int SoapyLiteXXTRX::writeStream(
 
     const size_t n = std::min((returnedElems - samp_avail), _tx_stream.remainderSamps);
 
-    // Write out channels
-    for (size_t i = 0; i < _tx_stream.channels.size(); i++)
-    {
-        interleave(buffs[i], _tx_stream.remainderBuff + (cplx_size * _tx_stream.channels[i]), n, _tx_stream.format,
-            samp_avail);
+    /* Write out channels to the new buffer. */
+    for (size_t i = 0; i < _tx_stream.channels.size(); i++) {
+        interleave(buffs[i], _tx_stream.remainderBuff + (cplx_size * _tx_stream.channels[i]), n, _tx_stream.format, samp_avail);
     }
     _tx_stream.remainderSamps -= n;
     _tx_stream.remainderOffset += n;
 
-    if (_tx_stream.remainderSamps == 0)
-    {
+    if (_tx_stream.remainderSamps == 0) {
         this->releaseWriteBuffer(stream, _tx_stream.remainderHandle, _tx_stream.remainderOffset, flags, timeNs);
         _tx_stream.remainderHandle = -1;
         _tx_stream.remainderOffset = 0;
