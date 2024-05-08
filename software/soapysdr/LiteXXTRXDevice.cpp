@@ -26,82 +26,142 @@
  *                                     Default Configuration
  **************************************************************************************************/
 
-/* Mainly for TX->PORT2 & RX->PORT1, FIXME: registers details */
-
-#define TEST_CFG
 const std::vector<std::pair<uint16_t, uint16_t>> xtrx_default_cfg = {
-#if 1
-    {0x0023, 0x5542},  // 0b1010101 0100 0010
-    {0x002a, 0x0192},
-    {0x002b, 0x002c},  // 0b0010 1100
-    {0x002c, 0xffff},
-    {0x00ad, 0x03f3},
-#else
-    { 0x0022, 0x0FFF },
-#ifndef TEST_CFG
-    { 0x0023, 0x5550 },
-    { 0x002B, 0x0038 },
-    { 0x002C, 0x0000 },
-#else
-    {0x0023, 0x5542},  // 0b1010101 0100 0010
-    {0x002a, 0x0192},
-    {0x002b, 0x002c},  // 0b0010 1100
-    {0x002c, 0xffff},
-#endif
-    { 0x002D, 0x0641 },
-    { 0x0086, 0x4101 },
-    { 0x0087, 0x5555 },
-    { 0x0088, 0x0525 },
-    { 0x0089, 0x1078 },
-    { 0x008B, 0x218C },
-    { 0x008C, 0x267B },
-    { 0x00A6, 0x000F },
-#ifdef TEST_CFG
-    {0x00ad, 0x03f3},
-#endif
-    { 0x00A9, 0x8000 },
-    { 0x00AC, 0x2000 },
-    { 0x0108, 0x218C },
-    { 0x0109, 0x57C1 },
-    { 0x010A, 0x154C },
-    { 0x010B, 0x0001 },
-    { 0x010C, 0x8865 },
-    { 0x010D, 0x011A },
-    { 0x010E, 0x0000 },
-    { 0x010F, 0x3142 },
-    { 0x0110, 0x2B14 },
-    { 0x0111, 0x0000 },
-    { 0x0112, 0x000C },
-    { 0x0113, 0x03C2 },
-    { 0x0114, 0x01F0 },
-    { 0x0115, 0x000D },
-    { 0x0118, 0x418C },
-    { 0x0119, 0x5292 },
-    { 0x011A, 0x3001 },
-    { 0x011C, 0x8941 },
-    { 0x011D, 0x0000 },
-    { 0x011E, 0x0984 },
-    { 0x0120, 0xE6C0 },
-    { 0x0121, 0x3638 },
-    { 0x0122, 0x0514 },
-    { 0x0123, 0x200F },
-    { 0x0200, 0x00E1 },
-    { 0x0208, 0x017B },
-    { 0x020B, 0x4000 },
-    { 0x020C, 0x8000 },
-    { 0x0400, 0x8081 },
-    { 0x0404, 0x0006 },
-    { 0x040B, 0x1020 },
-    { 0x040C, 0x00FB },
-#endif
-    // LDOs
-    { 0x0092, 0x0D15 },
-    { 0x0093, 0x01B1 },
-    { 0x00A6, 0x000F },
+    /* LMS7002M generic */
+
+    // Register 0x0023 - **LML1_LML2_MODE**
+    {0x0023, 0x5542},  // 0b0101010101000010
+    // [15]   DIQDIRCTR2    : DIQ2 direction control mode (0: Automatic, 1: Manual) = 0
+    // [14]   DIQDIR2       : DIQ2 direction (0: Output, 1: Input) = 1
+    // [13]   DIQDIRCTR1    : DIQ1 direction control mode (0: Automatic, 1: Manual) = 0
+    // [12]   DIQDIR1       : DIQ1 direction (0: Output, 1: Input) = 1
+    // [11]   ENABLEDIRCTR2 : ENABLE2 direction control mode (0: Automatic, 1: Manual) = 0
+    // [10]   ENABLEDIR2    : ENABLE2 direction (0: Output, 1: Input) = 1
+    // [9]    ENABLEDIRCTR1 : ENABLE1 direction control mode (0: Automatic, 1: Manual) = 0
+    // [8]    ENABLEDIR1    : ENABLE1 direction (0: Output, 1: Input) = 1
+    // [7]    Reserved
+    // [6]    MOD_EN        : LimeLightTM interface enable (0: Disabled, 1: Enabled) = 1
+    // [5]    LML2_FIDM     : Frame start ID selection for Port 2 (0: Frame start when 0, 1: Frame start when 1) = 0
+    // [4]    LML2_RXNTXIQ  : TXIQ/RXIQ mode selection for Port 2 (0: BB2RF, 1: RF2BB) = 1
+    // [3]    LML2_MODE     : Mode of LimeLightTM Port 2 (0: TRXIQ, 1: JESD207) = 0
+    // [2]    LML1_FIDM     : Frame start ID selection for Port 1 (0: Frame start when 0, 1: Frame start when 1) = 1
+    // [1]    LML1_RXNTXIQ  : TXIQ/RXIQ mode selection for Port 1 (0: BB2RF, 1: RF2BB) = 0
+    // [0]    LML1_MODE1    : Mode of LimeLightTM Port 1 (0: TRXIQ, 1: JESD207) = 1
+
+    // Register 0x002a - **LML_CLK_CTRL**
+    {0x002a, 0x0192},  // 0b0000000110010010
+    // [15:14] FCLK2_DLY   : FCLK2 clock internal delay (00: No delay, 01: 1x delay, 10: 2x delay, 11: 3x delay) = 00
+    // [13:12] FCLK1_DLY   : FCLK1 clock internal delay (00: No delay, 01: 1x delay, 10: 2x delay, 11: 3x delay) = 00
+    // [11:10] RX_MUX      : RxFIFO data source selection (00: RxTSPCLK, 01: TxFIFO, 10/11: LFSR) = 00
+    // [9:8]   TX_MUX      : Port selection for data transmit to TSP (00: Port 1, 01: Port 2, 10/11: RxTSP) = 10
+    // [7:6]   TXRDCLK_MUX : TX FIFO read clock selection (10/11: TxTSPCLK, 01: FCLK2, 00: FCLK1) = 01
+    // [5:4]   TXWRCLK_MUX : TX FIFO write clock selection (10/11: RxTSPCLK, 01: FCLK2, 00: FCLK1) = 00
+    // [3:2]   RXRDCLK_MUX : RX FIFO read clock selection (11: FCLK2, 10: FCLK1, 01: MCLK2, 00: MCLK1) = 00
+    // [1:0]   RXWRCLK_MUX : RX FIFO write clock selection (10/11: RxTSPCLK, 01: FCLK2, 00: FCLK1) = 10
+
+    // Register 0x002b - **LML_SRC**
+    {0x002b, 0x002c},  // 0b0000001000111100
+    // [15]   FCLK2_INV  : FCLK2 clock inversion (0: Not inverted, 1: Inverted) = 0
+    // [14]   FCLK1_INV  : FCLK1 clock inversion (0: Not inverted, 1: Inverted) = 0
+    // [13:12] MCLK2_DLY : MCLK2 clock internal delay (00: No delay, 01: 1x delay, 10: 2x delay, 11: 3x delay) = 01
+    // [11:10] MCLK1_DLY : MCLK1 clock internal delay (00: No delay, 01: 1x delay, 10: 2x delay, 11: 3x delay) = 01
+    // [9]    MCLK2_INV  : MCLK2 clock inversion (0: Not inverted, 1: Inverted) = 0
+    // [8]    MCLK1_INV  : MCLK1 clock inversion (0: Not inverted, 1: Inverted) = 0
+    // [7:6]  Reserved
+    // [5:4]  MCLK2_SRC  : MCLK2 clock source (00: TxTSPCLKA after divider, 01: RxTSPCLKA after divider, 10: TxTSPCLKA, 11: RxTSPCLKA) = 01
+    // [3:2]  MCLK1_SRC  : MCLK1 clock source (00: TxTSPCLKA after divider, 01: RxTSPCLKA after divider, 10: TxTSPCLKA, 11: RxTSPCLKA) = 10
+    // [1]    TXDIVEN    : TX clock divider enable (0: Divider disabled, 1: Divider enabled) = 1
+    // [0]    RXDIVEN    : RX clock divider enable (0: Divider disabled, 1: Divider enabled) = 1
+
+    // Register 0x002c - **LML_CLK_DIV**
+    {0x002c, 0xffff},  // 0b1111111111111111
+    // [15:8]  TXTSPCLKA_DIV : TxTSP clock divider (unsigned integer, 0-255, default is 255) = 255
+    // [7:0]   RXTSPCLKA_DIV : RxTSP clock divider (unsigned integer, 0-255, default is 255) = 255
+
+    // Register 0x00ad - **CDS**
+    {0x00ad, 0x03f3},  // 0b0000001111110011
+    // [15:14] CDS_MCLK2   : MCLK2 clock delay (00: 400ps, 01: 500ps, 10: 600ps, 11: 700ps) = 00
+    // [13:12] CDS_MCLK1   : MCLK1 clock delay (00: 400ps, 01: 500ps, 10: 600ps, 11: 700ps) = 00
+    // [11:10] Reserved
+    // [9]     CDSN_TXBTSP : TX TSPB clock inversion control (0: Clock inverted, 1: Not inverted) = 1
+    // [8]     CDSN_TXATSP : TX TSPA clock inversion control (0: Clock inverted, 1: Not inverted) = 1
+    // [7]     CDSN_RXBTSP : RX TSPB clock inversion control (0: Clock inverted, 1: Not inverted) = 1
+    // [6]     CDSN_RXATSP : RX TSPA clock inversion control (0: Clock inverted, 1: Not inverted) = 1
+    // [5]     CDSN_TXBLML : TX LMLB clock inversion control (0: Clock inverted, 1: Not inverted) = 1
+    // [4]     CDSN_TXALML : TX LMLA clock inversion control (0: Clock inverted, 1: Not inverted) = 1
+    // [3]     CDSN_RXBLML : RX LMLB clock inversion control (0: Clock inverted, 1: Not inverted) = 1
+    // [2]     CDSN_RXALML : RX LMLA clock inversion control (0: Clock inverted, 1: Not inverted) = 1
+    // [1]     CDSN_MCLK2  : MCLK2 clock inversion control (0: Clock inverted, 1: Not inverted) = 1
+    // [0]     CDSN_MCLK1  : MCLK1 clock inversion control (0: Clock inverted, 1: Not inverted) = 1
+
+    // Register 0x0092 - **LDO_CTRL1**
+    {0x0092, 0x0D15},  // 0b0000110100010101
+    // [15]  EN_LDO_DIG    : Enable LDO (0: Powered down, 1: Enabled) = 0
+    // [14]  EN_LDO_DIGGN  : Enable LDO (0: Powered down, 1: Enabled) = 0
+    // [13]  EN_LDO_DIGSXR : Enable LDO (0: Powered down, 1: Enabled) = 1
+    // [12]  EN_LDO_DIGSXT : Enable LDO (0: Powered down, 1: Enabled) = 1
+    // [11]  EN_LDO_DIVGN  : Enable LDO (0: Powered down, 1: Enabled) = 1
+    // [10]  EN_LDO_DIVSXR : Enable LDO (0: Powered down, 1: Enabled) = 1
+    // [9]   EN_LDO_DIVSXT : Enable LDO (0: Powered down, 1: Enabled) = 0
+    // [8]   EN_LDO_LNA12  : Enable LDO (0: Powered down, 1: Enabled) = 0
+    // [7]   EN_LDO_LNA14  : Enable LDO (0: Powered down, 1: Enabled) = 0
+    // [6]   EN_LDO_MXRFE  : Enable LDO (0: Powered down, 1: Enabled) = 1
+    // [5]   EN_LDO_RBB    : Enable LDO (0: Powered down, 1: Enabled) = 1
+    // [4]   EN_LDO_RXBUF  : Enable LDO (0: Powered down, 1: Enabled) = 1
+    // [3]   EN_LDO_TBB    : Enable LDO (0: Powered down, 1: Enabled) = 0
+    // [2]   EN_LDO_TIA12  : Enable LDO (0: Powered down, 1: Enabled) = 1
+    // [1]   EN_LDO_TIA14  : Enable LDO (0: Powered down, 1: Enabled) = 0
+    // [0]   EN_G_LDO      : Enable control for all LDO power downs (0: All powered down, 1: Controlled by individual registers) = 1
+
+    // Register 0x0093 - **LDO_CTRL2**
+    {0x0093, 0x01B1},  // 0b0000000110110001
+    // [15]  EN_LOADIMP_LDO_TLOB   : Enable load-dependent bias (0: Constant bias, 1: Load dependent) = 0
+    // [14]  EN_LOADIMP_LDO_TPAD   : Enable load-dependent bias (0: Constant bias, 1: Load dependent) = 0
+    // [13]  EN_LOADIMP_LDO_TXBUF  : Enable load-dependent bias (0: Constant bias, 1: Load dependent) = 0
+    // [12]  EN_LOADIMP_LDO_VCOGN  : Enable load-dependent bias (0: Constant bias, 1: Load dependent) = 0
+    // [11]  EN_LOADIMP_LDO_VCOSXR : Enable load-dependent bias (0: Constant bias, 1: Load dependent) = 0
+    // [10]  EN_LOADIMP_LDO_VCOSXT : Enable load-dependent bias (0: Constant bias, 1: Load dependent) = 1
+    // [9]   EN_LDO_AFE            : Enable LDO (0: Powered down, 1: Enabled) = 1
+    // [8]   EN_LDO_CPGN           : Enable LDO (0: Powered down, 1: Enabled) = 0
+    // [7]   EN_LDO_CPSXR          : Enable LDO (0: Powered down, 1: Enabled) = 1
+    // [6]   EN_LDO_TLOB           : Enable LDO (0: Powered down, 1: Enabled) = 1
+    // [5]   EN_LDO_TPAD           : Enable LDO (0: Powered down, 1: Enabled) = 1
+    // [4]   EN_LDO_TXBUF          : Enable LDO (0: Powered down, 1: Enabled) = 1
+    // [3]   EN_LDO_VCOGN          : Enable LDO (0: Powered down, 1: Enabled) = 0
+    // [2]   EN_LDO_VCOSXR         : Enable LDO (0: Powered down, 1: Enabled) = 1
+    // [1]   EN_LDO_VCOSXT         : Enable LDO (0: Powered down, 1: Enabled) = 1
+    // [0]   EN_LDO_CPSXT          : Enable LDO (0: Powered down, 1: Enabled) = 1
+
+    // Register 0x00A6 - **LDO_MISC_CTRL**
+    {0x00A6, 0x000F},  // 0b0000000000001111
+    // [15:13] ISINK_SPIBUFF         : SPIBUF LDO output resistive load (0: Off, 1: 10kΩ, ..., 7: 476Ω) = 000
+    // [12]    SPDUP_LDO_SPIBUF      : Speed up settling time for LDO (0: Resistor in place, 1: Bypass resistor) = 0
+    // [11]    SPDUP_LDO_DIGIp2      : Speed up settling time for LDO (0: Resistor in place, 1: Bypass resistor) = 0
+    // [10]    SPDUP_LDO_DIGIp1      : Speed up settling time for LDO (0: Resistor in place, 1: Bypass resistor) = 0
+    // [9]     BYP_LDO_SPIBUF        : Bypass signal for LDO (0: Normal operation, 1: Bypass LDO) = 0
+    // [8]     BYP_LDO_DIGIp2        : Bypass signal for LDO (0: Normal operation, 1: Bypass LDO) = 0
+    // [7]     BYP_LDO_DIGIp1        : Bypass signal for LDO (0: Normal operation, 1: Bypass LDO) = 0
+    // [6]     EN_LOADIMP_LDO_SPIBUF : Enable load-dependent bias (0: Constant bias, 1: Load dependent) = 0
+    // [5]     EN_LOADIMP_LDO_DIGIp2 : Enable load-dependent bias (0: Constant bias, 1: Load dependent) = 0
+    // [4]     EN_LOADIMP_LDO_DIGIp1 : Enable load-dependent bias (0: Constant bias, 1: Load dependent) = 0
+    // [3]     PD_LDO_SPIBUF         : Power down signal for LDO (0: Active, 1: Powered down) = 0
+    // [2]     PD_LDO_DIGIp2         : Power down signal for LDO (0: Active, 1: Powered down) = 0
+    // [1]     PD_LDO_DIGIp1         : Power down signal for LDO (0: Active, 1: Powered down) = 0
+    // [0]     EN_G_LDOP             : Enable control for all LDO power downs (0: All powered down, 1: Controlled individually) = 1
+
     /* XTRX specific */
-    /* XBUS */
-    {0x0085, 0x0019}, // [4] EN_OUT2_XBUF_TX:   TX XBUF 2nd output is disabled
-                      // [3] EN_TBUFIN_XBUF_RX: RX XBUF input is coming from TX
+
+    // Register 0x0085 - **XBUF_CTRL**
+    {0x0085, 0x0019},  // 0b0000000000011001
+    // [8] SLFB_XBUF_RX      : Self biasing digital control (0: Disabled, 1: Enabled) = 0
+    // [7] SLFB_XBUF_TX      : Self biasing digital control (0: Disabled, 1: Enabled) = 0
+    // [6] BYP_XBUF_RX       : Bypass input buffer (0: Not active, 1: Active) = 0
+    // [5] BYP_XBUF_TX       : Bypass input buffer (0: Not active, 1: Active) = 0
+    // [4] EN_OUT2_XBUF_TX   : Enable 2nd output of TX XBUF (0: Active, 1: Disabled) = 1
+    // [3] EN_TBUFIN_XBUF_RX : RX XBUF input from TX (0: From external XOSC, 1: From TX) = 1
+    // [2] PD_XBUF_RX        : Power down RX XBUF (0: Active, 1: Powered down) = 0
+    // [1] PD_XBUF_TX        : Power down TX XBUF (0: Active, 1: Powered down) = 0
+    // [0] EN_G_XBUF         : Enable control for all XBUF power downs (0: All powered down, 1: Controlled individually) = 1
 };
 
 /***************************************************************************************************
@@ -1140,7 +1200,7 @@ std::string SoapyLiteXXTRX::readSensor(const std::string &key) const {
 std::vector<std::string> SoapyLiteXXTRX::listRegisterInterfaces(void) const {
     std::vector<std::string> interfaces;
     interfaces.push_back("LMS7002M");
-    interfaces.push_back("LitePCI");
+    interfaces.push_back("LitePCIe");
     return interfaces;
 }
 
@@ -1158,7 +1218,7 @@ unsigned SoapyLiteXXTRX::readRegister(const unsigned addr) const {
 void SoapyLiteXXTRX::writeRegister(const std::string &name, const unsigned addr, const unsigned value) {
     if (name == "LMS7002M") {
         _lms2->SPI_write(addr, value);
-    } else if (name == "LitePCI") {
+    } else if (name == "LitePCIe") {
         litepcie_writel(_fd, addr, value);
     } else
         throw std::runtime_error("SoapyLiteXXTRX::writeRegister(" + name + ") unknown register");
@@ -1167,7 +1227,7 @@ void SoapyLiteXXTRX::writeRegister(const std::string &name, const unsigned addr,
 unsigned SoapyLiteXXTRX::readRegister(const std::string &name, const unsigned addr) const {
     if (name == "LMS7002M") {
         return _lms2->SPI_read(addr);
-    } else if (name == "LitePCI") {
+    } else if (name == "LitePCIe") {
         return litepcie_readl(_fd, addr);
     } else
         throw std::runtime_error("SoapyLiteXXTRX::readRegister(" + name + ") unknown register");
