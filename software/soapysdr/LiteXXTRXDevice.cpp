@@ -22,6 +22,10 @@
 #include <SoapySDR/Registry.hpp>
 #include <SoapySDR/Logger.hpp>
 
+// TODO define    : What the issue/limitation?
+// FIXME define   : What the issue/limitation?
+// FORNEXT define : What the issue/limitation?
+
 /***************************************************************************************************
  *                                     Default Configuration
  **************************************************************************************************/
@@ -1113,24 +1117,28 @@ SoapySDR::ArgInfo SoapyLiteXXTRX::getSensorInfo(const std::string &key) const {
 
 #ifdef CSR_XADC_BASE
         if (deviceStr == "xadc") {
+            /* Temp */
             if (sensorStr == "temp") {
                 info.key         = "temp";
                 info.value       = "0.0";
                 info.units       = "C";
                 info.description = "FPGA temperature";
                 info.type        = SoapySDR::ArgInfo::FLOAT;
+            /* VCCINT */
             } else if (sensorStr == "vccint") {
                 info.key         = "vccint";
                 info.value       = "0.0";
                 info.units       = "V";
                 info.description = "FPGA internal supply voltage";
                 info.type        = SoapySDR::ArgInfo::FLOAT;
+            /* VCCAUX */
             } else if (sensorStr == "vccaux") {
                 info.key         = "vccaux";
                 info.value       = "0.0";
                 info.units       = "V";
                 info.description = "FPGA auxiliary supply voltage";
                 info.type        = SoapySDR::ArgInfo::FLOAT;
+            /* VCCBRAM */
             } else if (sensorStr == "vccbram") {
                 info.key         = "vccbram";
                 info.value       = "0.0";
@@ -1158,18 +1166,22 @@ std::string SoapyLiteXXTRX::readSensor(const std::string &key) const {
 
 #ifdef CSR_XADC_BASE
         if (deviceStr == "xadc") {
+            /* Temp */
             if (sensorStr == "temp") {
                 sensorValue = std::to_string(
                     (double)litepcie_readl(_fd, CSR_XADC_TEMPERATURE_ADDR) * 503.975 / 4096 - 273.15
                 );
+            /* VCCINT */
             } else if (sensorStr == "vccint") {
                 sensorValue = std::to_string(
                     (double)litepcie_readl(_fd, CSR_XADC_VCCINT_ADDR) / 4096 * 3
                 );
+            /* VCCAUX */
             } else if (sensorStr == "vccaux") {
                 sensorValue = std::to_string(
                     (double)litepcie_readl(_fd, CSR_XADC_VCCAUX_ADDR) / 4096 * 3
                 );
+            /* VCCBRAM */
             } else if (sensorStr == "vccbram") {
                 sensorValue = std::to_string(
                     (double)litepcie_readl(_fd, CSR_XADC_VCCBRAM_ADDR) / 4096 * 3
@@ -1230,38 +1242,51 @@ std::string SoapyLiteXXTRX::readSetting(const std::string &key) const
 {
     SoapySDR::logf(SOAPY_SDR_DEBUG, "SoapyLiteXXTRX::readSetting(%s)", key.c_str());
 
+    /* FPGA_TX_RX_LOOPBACK_ENABLE */
     if (key == "FPGA_TX_RX_LOOPBACK_ENABLE") {
         uint32_t control = litepcie_readl(_fd, CSR_LMS7002M_CONTROL_ADDR);
         control &= 1 << CSR_LMS7002M_CONTROL_TX_RX_LOOPBACK_ENABLE_OFFSET;
         return control ? "TRUE" : "FALSE";
+
+    /* FPGA_TX_PATTERN */
     } else if (key == "FPGA_TX_PATTERN") {
         uint32_t control = litepcie_readl(_fd, CSR_LMS7002M_TX_PATTERN_CONTROL_ADDR);
         control &= 1 << CSR_LMS7002M_TX_PATTERN_CONTROL_ENABLE_OFFSET;
         return control ? "1" : "0";
-    } else if (key == "FPGA_RX_PATTERN") {
+
+    /* FPGA_TX_PATTERN */
+    } else if (key == "FPGA_TX_PATTERN") {
         uint32_t control = litepcie_readl(_fd, CSR_LMS7002M_RX_PATTERN_CONTROL_ADDR);
         control &= 1 << CSR_LMS7002M_RX_PATTERN_CONTROL_ENABLE_OFFSET;
         return control ? "1" : "0";
+
+    /* FPGA_RX_PATTERN_ERRORS */
     } else if (key == "FPGA_RX_PATTERN_ERRORS") {
         uint32_t errors = litepcie_readl(_fd, CSR_LMS7002M_RX_PATTERN_ERRORS_ADDR);
         return std::to_string(errors);
+
+    /* FPGA_TX_DELAY */
     } else if (key == "FPGA_TX_DELAY") {
         uint32_t reg = litepcie_readl(_fd, CSR_LMS7002M_DELAY_ADDR);
         uint32_t mask = ((uint32_t)(1 << CSR_LMS7002M_DELAY_TX_DELAY_SIZE)-1);
         uint32_t delay = (reg >> CSR_LMS7002M_DELAY_TX_DELAY_OFFSET) & mask;
         return std::to_string(delay);
+
+    /* FPGA_RX_DELAY */
     } else if (key == "FPGA_RX_DELAY") {
         uint32_t reg = litepcie_readl(_fd, CSR_LMS7002M_DELAY_ADDR);
         uint32_t mask = ((uint32_t)(1 << CSR_LMS7002M_DELAY_RX_DELAY_SIZE)-1);
         uint32_t delay = (reg >> CSR_LMS7002M_DELAY_RX_DELAY_OFFSET) & mask;
         return std::to_string(delay);
+
+    /* DMA_BUFFERS */
     } else if (key == "DMA_BUFFERS") {
-        return "RX hw count: " + std::to_string(_rx_stream.hw_count)
-                + " RX sw count: " + std::to_string(_rx_stream.sw_count)
-                + " RX user count: " + std::to_string(_rx_stream.user_count)
-                + " TX hw count: " + std::to_string(_tx_stream.hw_count)
-                + " TX sw count: " + std::to_string(_tx_stream.sw_count)
-                + " TX user count: " + std::to_string(_tx_stream.user_count);
+        return "RX hw count : "     + std::to_string(_rx_stream.hw_count)   +
+                " RX sw count : "   + std::to_string(_rx_stream.sw_count)   +
+                " RX user count : " + std::to_string(_rx_stream.user_count) +
+                " TX hw count : "   + std::to_string(_tx_stream.hw_count)   +
+                " TX sw count : "   + std::to_string(_tx_stream.sw_count)   +
+                " TX user count : " + std::to_string(_tx_stream.user_count);
     } else
         throw std::runtime_error("SoapyLiteXXTRX::readSetting(" + key + ") unknown key");
 }
@@ -1271,6 +1296,10 @@ void SoapyLiteXXTRX::writeSetting(const std::string &key, const std::string &val
                    key.c_str(), value.c_str());
 
     std::lock_guard<std::mutex> lock(_mutex);
+
+    /************/
+    /* LMS7002M */
+    /* **********/
 
     // undo any changes caused by one of the other keys with these enable calls
 #ifdef TODO
@@ -1287,10 +1316,12 @@ void SoapyLiteXXTRX::writeSetting(const std::string &key, const std::string &val
     else if (key == "RXTSP_TSG_CONST") {
         const int ampl = std::stoi(value);
         LMS7002M_rxtsp_tsg_const(_lms, LMS_CHAB, ampl, 0);
-    } else if (key == "TXTSP_TSG_CONST") {
+    }
+    else if (key == "TXTSP_TSG_CONST") {
         const int ampl = std::stoi(value);
         LMS7002M_txtsp_tsg_const(_lms, LMS_CHAB, ampl, 0);
-    } else if (key == "TBB_ENABLE_LOOPBACK") {
+    }
+    else if (key == "TBB_ENABLE_LOOPBACK") {
         SoapySDR::log(SOAPY_SDR_DEBUG, "Setting TBB loopback");
         int path = 0;
         if (value == "LB_DISCONNECTED")
@@ -1305,7 +1336,8 @@ void SoapyLiteXXTRX::writeSetting(const std::string &key, const std::string &val
             throw std::runtime_error("SoapyLiteXXTRX::writeSetting(" + key + ", " +
                                      value + ") unknown value");
         LMS7002M_tbb_enable_loopback(_lms, LMS_CHAB, path, false);
-    } else if (key == "TBB_SET_PATH") {
+    }
+    else if (key == "TBB_SET_PATH") {
         int path = 0;
         if (value == "TBB_BYP")
             path = LMS7002M_TBB_BYP;
@@ -1321,7 +1353,8 @@ void SoapyLiteXXTRX::writeSetting(const std::string &key, const std::string &val
             throw std::runtime_error("SoapyLiteXXTRX::writeSetting(" + key + ", " +
                                      value + ") unknown value");
         LMS7002M_tbb_set_path(_lms, LMS_CHAB, path);
-    } else if (key == "RBB_SET_PATH") {
+    }
+    else if (key == "RBB_SET_PATH") {
         int path = 0;
         if (value == "BYP")
             path = LMS7002M_RBB_BYP;
@@ -1341,7 +1374,8 @@ void SoapyLiteXXTRX::writeSetting(const std::string &key, const std::string &val
             throw std::runtime_error("SoapyLiteXXTRX::writeSetting(" + key + ", " +
                                      value + ") unknown value");
         LMS7002M_rbb_set_path(_lms, LMS_CHAB, path);
-    } else if (key == "LOOPBACK_ENABLE") {
+    }
+    else if (key == "LOOPBACK_ENABLE") {
         SoapySDR::log(SOAPY_SDR_DEBUG, "Setting Digital Loopback");
         if (value == "TRUE") {
             LMS7002M_setup_digital_loopback(_lms);
@@ -1351,7 +1385,8 @@ void SoapyLiteXXTRX::writeSetting(const std::string &key, const std::string &val
         } else
             throw std::runtime_error("SoapyLiteXXTRX::writeSetting(" + key + ", " +
                                      value + ") unknown value");
-    } else if (key == "LOOPBACK_ENABLE_LFSR") {
+    }
+    else if (key == "LOOPBACK_ENABLE_LFSR") {
         SoapySDR::log(SOAPY_SDR_DEBUG, "Setting LFSR Loopback");
         if (value == "TRUE") {
             LMS7002M_setup_digital_loopback_lfsr(_lms);
@@ -1361,12 +1396,28 @@ void SoapyLiteXXTRX::writeSetting(const std::string &key, const std::string &val
         } else
             throw std::runtime_error("SoapyLiteXXTRX::writeSetting(" + key + ", " +
                                      value + ") unknown value");
-    } else if (key == "TRF_ENABLE_LOOPBACK") {
+    }
+    else if (key == "TRF_ENABLE_LOOPBACK")
         LMS7002M_trf_enable_loopback(_lms, LMS_CHAB, value == "TRUE");
-    } else if (key == "RESET_RX_FIFO") {
+    else if (key == "RESET_RX_FIFO")
         LMS7002M_reset_lml_fifo(_lms, LMS_RX);
-    } else 
+    else if (key == "DUMP_INI")
+        LMS7002M_dump_ini(_lms, value.c_str());
+    else if (key == "RXTSP_TONE")
+        LMS7002M_rxtsp_tsg_tone_div(_lms, LMS_CHAB, std::stoi(value));
+    else if (key == "TXTSP_TONE")
+        LMS7002M_txtsp_tsg_tone_div(_lms, LMS_CHAB, std::stoi(value));
+    else if (key == "RXTSP_ENABLE")
+        LMS7002M_rxtsp_enable(_lms, LMS_CHAB, value == "TRUE");
+    else if (key == "TXTSP_ENABLE")
+        LMS7002M_txtsp_enable(_lms, LMS_CHAB, value == "TRUE");
 #endif
+
+    /********/
+    /* FPGA */
+    /********/
+
+    /* FPGA_TX_RX_LOOPBACK_ENABLE */
     if (key == "FPGA_TX_RX_LOOPBACK_ENABLE") {
         SoapySDR::log(SOAPY_SDR_DEBUG, "Setting FPGA TX-RX Loopback");
         uint32_t control = litepcie_readl(_fd, CSR_LMS7002M_CONTROL_ADDR);
@@ -1377,6 +1428,8 @@ void SoapyLiteXXTRX::writeSetting(const std::string &key, const std::string &val
             throw std::runtime_error("SoapyLiteXXTRX::writeSetting(" + key + ", " +
                                      value + ") unknown value");
         litepcie_writel(_fd, CSR_LMS7002M_CONTROL_ADDR, control);
+
+    /* FPGA_DMA_LOOPBACK_ENABLE */
     } else if (key == "FPGA_DMA_LOOPBACK_ENABLE") {
         SoapySDR::log(SOAPY_SDR_DEBUG, "Setting FPGA DMA Loopback");
         if (value == "TRUE")
@@ -1384,9 +1437,9 @@ void SoapyLiteXXTRX::writeSetting(const std::string &key, const std::string &val
         else if (value == "FALSE")
              dma_set_loopback(_fd, false);
         else
-            throw std::runtime_error("SoapyLiteXXTRX::writeSetting(" + key + ", " +
-                                     value + ") unknown value");
+            throw std::runtime_error("SoapyLiteXXTRX::writeSetting(" + key + ", " + value + ") unknown value");
 
+    /* FPGA_TX_PATTERN */
     } else if (key == "FPGA_TX_PATTERN") {
         SoapySDR::log(SOAPY_SDR_DEBUG, "Setting FPGA TX pattern");
         uint32_t control = litepcie_readl(_fd, CSR_LMS7002M_TX_PATTERN_CONTROL_ADDR);
@@ -1394,9 +1447,10 @@ void SoapyLiteXXTRX::writeSetting(const std::string &key, const std::string &val
         if (value == "1") {
             control |= 1 << CSR_LMS7002M_TX_PATTERN_CONTROL_ENABLE_OFFSET;
         } else if (value != "0")
-            throw std::runtime_error("SoapyLiteXXTRX::writeSetting(" + key + ", " +
-                                     value + ") unknown value");
+            throw std::runtime_error("SoapyLiteXXTRX::writeSetting(" + key + ", " + value + ") unknown value");
         litepcie_writel(_fd, CSR_LMS7002M_TX_PATTERN_CONTROL_ADDR, control);
+
+    /* FPGA_RD_PATTERN */
     } else if (key == "FPGA_RX_PATTERN") {
         SoapySDR::log(SOAPY_SDR_DEBUG, "Setting FPGA RX pattern");
         uint32_t control = litepcie_readl(_fd, CSR_LMS7002M_RX_PATTERN_CONTROL_ADDR);
@@ -1404,42 +1458,29 @@ void SoapyLiteXXTRX::writeSetting(const std::string &key, const std::string &val
         if (value == "1") {
             control |= 1 << CSR_LMS7002M_RX_PATTERN_CONTROL_ENABLE_OFFSET;
         } else if (value != "0")
-            throw std::runtime_error("SoapyLiteXXTRX::writeSetting(" + key + ", " +
-                                     value + ") unknown value");
+            throw std::runtime_error("SoapyLiteXXTRX::writeSetting(" + key + ", " + value + ") unknown value");
         litepcie_writel(_fd, CSR_LMS7002M_RX_PATTERN_CONTROL_ADDR, control);
+
+    /* FPGA_TX_DELAY */
     } else if (key == "FPGA_TX_DELAY") {
         int delay = std::stoi(value);
         if (delay < 0 || delay > 31)
-            throw std::runtime_error("SoapyLiteXXTRX::writeSetting(" + key + ", " +
-                                     value + ") invalid value");
+            throw std::runtime_error("SoapyLiteXXTRX::writeSetting(" + key + ", " + value + ") invalid value");
         uint32_t reg = litepcie_readl(_fd, CSR_LMS7002M_DELAY_ADDR);
         uint32_t mask = ((uint32_t)(1 << CSR_LMS7002M_DELAY_TX_DELAY_SIZE)-1) << CSR_LMS7002M_DELAY_TX_DELAY_OFFSET;
-        litepcie_writel(_fd, CSR_LMS7002M_DELAY_ADDR,
-                        (reg & ~mask) | (delay << CSR_LMS7002M_DELAY_TX_DELAY_OFFSET));
+        litepcie_writel(_fd, CSR_LMS7002M_DELAY_ADDR, (reg & ~mask) | (delay << CSR_LMS7002M_DELAY_TX_DELAY_OFFSET));
+
+    /* FPGA_RX_DELAY */
     } else if (key == "FPGA_RX_DELAY") {
         int delay = std::stoi(value);
         if (delay < 0 || delay > 31)
-            throw std::runtime_error("SoapyLiteXXTRX::writeSetting(" + key + ", " +
-                                     value + ") invalid value");
+            throw std::runtime_error("SoapyLiteXXTRX::writeSetting(" + key + ", " + value + ") invalid value");
         uint32_t reg = litepcie_readl(_fd, CSR_LMS7002M_DELAY_ADDR);
         uint32_t mask = ((uint32_t)(1 << CSR_LMS7002M_DELAY_RX_DELAY_SIZE)-1) << CSR_LMS7002M_DELAY_RX_DELAY_OFFSET;
-        litepcie_writel(_fd, CSR_LMS7002M_DELAY_ADDR,
-                        (reg & ~mask) | (delay << CSR_LMS7002M_DELAY_RX_DELAY_OFFSET));
-#ifdef TODO
-    } else if (key == "DUMP_INI") {
-        LMS7002M_dump_ini(_lms, value.c_str());
-    } else if (key == "RXTSP_TONE") {
-        LMS7002M_rxtsp_tsg_tone_div(_lms, LMS_CHAB, std::stoi(value));
-    } else if (key == "TXTSP_TONE") {
-        LMS7002M_txtsp_tsg_tone_div(_lms, LMS_CHAB, std::stoi(value));
-    } else if (key == "RXTSP_ENABLE") {
-        LMS7002M_rxtsp_enable(_lms, LMS_CHAB, value == "TRUE");
-    } else if (key == "TXTSP_ENABLE") {
-        LMS7002M_txtsp_enable(_lms, LMS_CHAB, value == "TRUE");
-#endif
+        litepcie_writel(_fd, CSR_LMS7002M_DELAY_ADDR, (reg & ~mask) | (delay << CSR_LMS7002M_DELAY_RX_DELAY_OFFSET));
+
     } else
-        throw std::runtime_error("SoapyLiteXXTRX::writeSetting(" + key + ", " +
-                                 value + ") unknown key");
+        throw std::runtime_error("SoapyLiteXXTRX::writeSetting(" + key + ", " + value + ") unknown key");
 }
 
 #ifdef FORNEXT
