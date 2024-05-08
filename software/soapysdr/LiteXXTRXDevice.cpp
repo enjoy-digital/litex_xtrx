@@ -1114,41 +1114,38 @@ SoapySDR::ArgInfo SoapyLiteXXTRX::getSensorInfo(const std::string &key) const {
 #ifdef CSR_XADC_BASE
         if (deviceStr == "xadc") {
             if (sensorStr == "temp") {
-                info.key = "temp";
-                info.value = "0.0";
-                info.units = "C";
+                info.key         = "temp";
+                info.value       = "0.0";
+                info.units       = "C";
                 info.description = "FPGA temperature";
-                info.type = SoapySDR::ArgInfo::FLOAT;
+                info.type        = SoapySDR::ArgInfo::FLOAT;
             } else if (sensorStr == "vccint") {
-                info.key = "vccint";
-                info.value = "0.0";
-                info.units = "V";
+                info.key         = "vccint";
+                info.value       = "0.0";
+                info.units       = "V";
                 info.description = "FPGA internal supply voltage";
-                info.type = SoapySDR::ArgInfo::FLOAT;
+                info.type        = SoapySDR::ArgInfo::FLOAT;
             } else if (sensorStr == "vccaux") {
-                info.key = "vccaux";
-                info.value = "0.0";
-                info.units = "V";
+                info.key         = "vccaux";
+                info.value       = "0.0";
+                info.units       = "V";
                 info.description = "FPGA auxiliary supply voltage";
-                info.type = SoapySDR::ArgInfo::FLOAT;
+                info.type        = SoapySDR::ArgInfo::FLOAT;
             } else if (sensorStr == "vccbram") {
-                info.key = "vccbram";
-                info.value = "0.0";
-                info.units = "V";
+                info.key         = "vccbram";
+                info.value       = "0.0";
+                info.units       = "V";
                 info.description = "FPGA supply voltage for block RAM memories";
-                info.type = SoapySDR::ArgInfo::FLOAT;
+                info.type        = SoapySDR::ArgInfo::FLOAT;
             } else {
-                throw std::runtime_error("SoapyLiteXXTRX::getSensorInfo(" + key +
-                                         ") unknown sensor");
+                throw std::runtime_error("SoapyLiteXXTRX::getSensorInfo(" + key + ") unknown sensor");
             }
             return info;
         }
 #endif
-        throw std::runtime_error("SoapyLiteXXTRX::getSensorInfo(" + key +
-                                 ") unknown device");
+        throw std::runtime_error("SoapyLiteXXTRX::getSensorInfo(" + key + ") unknown device");
     }
-    throw std::runtime_error("SoapyLiteXXTRX::getSensorInfo(" + key +
-                             ") unknown key");
+    throw std::runtime_error("SoapyLiteXXTRX::getSensorInfo(" + key + ") unknown key");
 }
 
 std::string SoapyLiteXXTRX::readSensor(const std::string &key) const {
@@ -1163,35 +1160,30 @@ std::string SoapyLiteXXTRX::readSensor(const std::string &key) const {
         if (deviceStr == "xadc") {
             if (sensorStr == "temp") {
                 sensorValue = std::to_string(
-                    (double)litepcie_readl(_fd, CSR_XADC_TEMPERATURE_ADDR) *
-                        503.975 / 4096 -
-                    273.15);
+                    (double)litepcie_readl(_fd, CSR_XADC_TEMPERATURE_ADDR) * 503.975 / 4096 - 273.15
+                );
             } else if (sensorStr == "vccint") {
                 sensorValue = std::to_string(
-                    (double)litepcie_readl(_fd, CSR_XADC_VCCINT_ADDR) / 4096 *
-                    3);
+                    (double)litepcie_readl(_fd, CSR_XADC_VCCINT_ADDR) / 4096 * 3
+                );
             } else if (sensorStr == "vccaux") {
                 sensorValue = std::to_string(
-                    (double)litepcie_readl(_fd, CSR_XADC_VCCAUX_ADDR) / 4096 *
-                    3);
+                    (double)litepcie_readl(_fd, CSR_XADC_VCCAUX_ADDR) / 4096 * 3
+                );
             } else if (sensorStr == "vccbram") {
                 sensorValue = std::to_string(
-                    (double)litepcie_readl(_fd, CSR_XADC_VCCBRAM_ADDR) / 4096 *
-                    3);
+                    (double)litepcie_readl(_fd, CSR_XADC_VCCBRAM_ADDR) / 4096 * 3
+                );
             } else {
-                throw std::runtime_error("SoapyLiteXXTRX::getSensorInfo(" + key +
-                                         ") unknown sensor");
+                throw std::runtime_error("SoapyLiteXXTRX::getSensorInfo(" + key + ") unknown sensor");
             }
             return sensorValue;
         }
 #endif
-        throw std::runtime_error("SoapyLiteXXTRX::getSensorInfo(" + key +
-                                 ") unknown device");
+        throw std::runtime_error("SoapyLiteXXTRX::getSensorInfo(" + key + ") unknown device");
     }
-    throw std::runtime_error("SoapyLiteXXTRX::getSensorInfo(" + key +
-                             ") unknown key");
+    throw std::runtime_error("SoapyLiteXXTRX::getSensorInfo(" + key + ") unknown key");
 }
-
 
 /***************************************************************************************************
  *                                     Register API
@@ -1204,7 +1196,6 @@ std::vector<std::string> SoapyLiteXXTRX::listRegisterInterfaces(void) const {
     return interfaces;
 }
 
-
 void SoapyLiteXXTRX::writeRegister(const unsigned addr, const unsigned value) {
     _lms2->SPI_write(addr, value);
 }
@@ -1212,8 +1203,6 @@ void SoapyLiteXXTRX::writeRegister(const unsigned addr, const unsigned value) {
 unsigned SoapyLiteXXTRX::readRegister(const unsigned addr) const {
     return _lms2->SPI_read(addr);
 }
-
-
 
 void SoapyLiteXXTRX::writeRegister(const std::string &name, const unsigned addr, const unsigned value) {
     if (name == "LMS7002M") {
@@ -1232,7 +1221,6 @@ unsigned SoapyLiteXXTRX::readRegister(const std::string &name, const unsigned ad
     } else
         throw std::runtime_error("SoapyLiteXXTRX::readRegister(" + name + ") unknown register");
 }
-
 
 /***************************************************************************************************
  *                                        Settings API
