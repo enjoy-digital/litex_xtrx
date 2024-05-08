@@ -193,22 +193,28 @@ int SoapyLiteXXTRX::getDirectAccessBufferAddrs(SoapySDR::Stream *stream,
     return 0;
 }
 
-// Our DMA readers/writers are zero-copy (i.e. using a single buffer shared with
-// the kernel), and use three counters to index that buffer:
-// - hw_count: where the hardware has read from / written to
-// - sw_count: where userspace has read from / written to
-// - user_count: where userspace is currently reading from / writing to
-//
-// The distinction between sw and user makes it possible to keep track of which
-// buffers are being processed. This is not supported by the LitePCIe DMA
-// library, and is why we do it ourselves.
-//
-// In addition, with a separate user count, the implementation of read/write can
-// advance buffers without performing a syscall (only having to interface with
-// the kernel when retiring buffers). That however results in slower detection
-// of overflows/underflows, so we make that configurable:
-#define DETECT_EVERY_OVERFLOW  true
-#define DETECT_EVERY_UNDERFLOW true
+/***************************************************************************************************
+ * DMA Buffer Management
+ *
+ * The DMA readers/writers utilize a zero-copy mechanism (i.e., a single buffer shared
+ * with the kernel) and employ three counters to index that buffer:
+ * - hw_count: Indicates the position where the hardware has read from or written to.
+ * - sw_count: Indicates the position where userspace has read from or written to.
+ * - user_count: Indicates the current position where userspace is reading from or
+ *   writing to.
+ *
+ * The distinction between sw_count and user_count enables tracking of which buffers are
+ * currently being processed. This feature is not directly supported by the LitePCIe DMA
+ * library, so it is implemented separately.
+ *
+ * Separating user_count enables advancing read/write buffers without requiring a syscall
+ * (interfacing with the kernel only when retiring buffers). However, this can result in
+ * slower detection of overflows and underflows, so overflow/underflow detection is made
+ * configurable.
+ **************************************************************************************************/
+
+#define DETECT_EVERY_OVERFLOW  true  /* Detect overflow every time it occurs. */
+#define DETECT_EVERY_UNDERFLOW true  /* Detect underflow every time it occurs. */
 
 /* Acquire a buffer for reading. */
 int SoapyLiteXXTRX::acquireReadBuffer(SoapySDR::Stream *stream, size_t &handle,
