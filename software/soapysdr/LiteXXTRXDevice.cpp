@@ -22,10 +22,12 @@
 #include <SoapySDR/Registry.hpp>
 #include <SoapySDR/Logger.hpp>
 
-/* Default configuration
- * mainly for TX->PORT2 & RX->PORT1
- * FIXME: registers details
- */
+/***************************************************************************************************
+ *                                     Default Configuration
+ **************************************************************************************************/
+
+/* Mainly for TX->PORT2 & RX->PORT1, FIXME: registers details */
+
 #define TEST_CFG
 const std::vector<std::pair<uint16_t, uint16_t>> xtrx_default_cfg = {
 #if 1
@@ -101,6 +103,10 @@ const std::vector<std::pair<uint16_t, uint16_t>> xtrx_default_cfg = {
     {0x0085, 0x0019}, // [4] EN_OUT2_XBUF_TX:   TX XBUF 2nd output is disabled
                       // [3] EN_TBUFIN_XBUF_RX: RX XBUF input is coming from TX
 };
+
+/***************************************************************************************************
+ *                                     SPI API
+ **************************************************************************************************/
 
 //#define LITEPCIE_SPI_DEBUG
 #define LITEPCIE_SPI_CS_HIGH (0 << 0)
@@ -186,21 +192,19 @@ class DLL_EXPORT LMS_SPI: public lime::ISPI {
         int _fd;
 };
 
-// Forward declaration for usage in constructor.
+
+/***************************************************************************************************
+ *                                     Constructor
+ **************************************************************************************************/
+
 std::string getLiteXXTRXSerial(int fd);
-
-
-/***********************************************************************
- * Constructor
- **********************************************************************/
+std::string getLiteXXTRXIdentification(int fd);
 
 void dma_set_loopback(int fd, bool loopback_enable) {
     struct litepcie_ioctl_dma m;
     m.loopback_enable = loopback_enable ? 1 : 0;
     checked_ioctl(fd, LITEPCIE_IOCTL_DMA, &m);
 }
-
-//#define ENABLE_TEST_TONE
 
 SoapyLiteXXTRX::SoapyLiteXXTRX(const SoapySDR::Kwargs &args)
     : _fd(-1),
@@ -335,11 +339,6 @@ SoapyLiteXXTRX::SoapyLiteXXTRX(const SoapySDR::Kwargs &args)
     }
 #endif
 
-#ifdef ENABLE_TEST_TONE
-    writeSetting("RXTSP_ENABLE", "TRUE");
-    writeSetting("RXTSP_TONE", "8");
-#endif
-
     SoapySDR::log(SOAPY_SDR_INFO, "SoapyLiteXXTRX initialization complete");
 }
 
@@ -373,26 +372,19 @@ SoapyLiteXXTRX::~SoapyLiteXXTRX(void) {
 }
 
 
-/***********************************************************************
- * Identification API
- **********************************************************************/
+/***************************************************************************************************
+ *                                  Identification API
+ **************************************************************************************************/
 
 SoapySDR::Kwargs SoapyLiteXXTRX::getHardwareInfo(void) const {
     SoapySDR::Kwargs args;
-
-    char fpga_identification[256];
-    for (int i = 0; i < 256; i++)
-        fpga_identification[i] =
-            litepcie_readl(_fd, CSR_IDENTIFIER_MEM_BASE + 4 * i);
-    args["identification"] = std::string(fpga_identification);
-
+    args["identification"] = getLiteXXTRXIdentification(_fd);
     return args;
 }
 
-
-/*******************************************************************
- * Antenna API
- ******************************************************************/
+/***************************************************************************************************
+ *                                     Antenna API
+ **************************************************************************************************/
 
 std::vector<std::string> SoapyLiteXXTRX::listAntennas(const int direction,
                                                  const size_t) const {
@@ -473,9 +465,9 @@ std::string SoapyLiteXXTRX::getAntenna(const int direction,
 }
 
 
-/*******************************************************************
- * Frontend corrections API
- ******************************************************************/
+/***************************************************************************************************
+ *                                 Frontend corrections API
+ **************************************************************************************************/
 
 bool SoapyLiteXXTRX::hasDCOffsetMode(const int direction,
                                 const size_t /*channel*/) const {
@@ -600,9 +592,9 @@ std::complex<double> SoapyLiteXXTRX::getIQBalance(const int direction,
 }
 
 
-/*******************************************************************
- * Gain API
- ******************************************************************/
+/***************************************************************************************************
+ *                                           Gain API
+ **************************************************************************************************/
 
 std::vector<std::string> SoapyLiteXXTRX::listGains(const int direction,
                                               const size_t) const {
@@ -752,9 +744,9 @@ SoapySDR::Range SoapyLiteXXTRX::getGainRange(const int direction,
 }
 
 
-/*******************************************************************
- * Frequency API
- ******************************************************************/
+/***************************************************************************************************
+ *                                     Frequency API
+ **************************************************************************************************/
 
 void SoapyLiteXXTRX::setFrequency(const int direction, const size_t channel,
                              const std::string &name, const double frequency,
@@ -820,9 +812,9 @@ SoapyLiteXXTRX::getFrequencyRange(const int direction, const size_t /*channel*/,
 }
 
 
-/*******************************************************************
- * Sample Rate API
- ******************************************************************/
+/***************************************************************************************************
+ *                                        Sample Rate API
+ **************************************************************************************************/
 
 void SoapyLiteXXTRX::setSampleRate(const int direction, const size_t channel,
                               const double rate) {
@@ -858,9 +850,9 @@ std::vector<std::string> SoapyLiteXXTRX::getStreamFormats(const int /*direction*
     return formats;
 }
 
-/*******************************************************************
- * BW filter API
- ******************************************************************/
+/***************************************************************************************************
+ *                                        BW filter API
+ **************************************************************************************************/
 
 void SoapyLiteXXTRX::setBandwidth(const int direction, const size_t channel,
                              const double bw) {
@@ -946,9 +938,9 @@ std::vector<double> SoapyLiteXXTRX::listBandwidths(const int direction,
 }
 
 
-/*******************************************************************
- * Clocking API
- ******************************************************************/
+/***************************************************************************************************
+ *                                        Clocking API
+ **************************************************************************************************/
 
 double SoapyLiteXXTRX::getTSPRate(const int direction) const {
     return (direction == SOAPY_SDR_TX) ? _masterClockRate
@@ -1036,9 +1028,9 @@ std::string SoapyLiteXXTRX::getClockSource(void) const {
     return source ? "external" : "internal";
 }
 
-/*******************************************************************
- * Clocking API
- ******************************************************************/
+/***************************************************************************************************
+ *                                  Sensors API
+ **************************************************************************************************/
 
 std::vector<std::string> SoapyLiteXXTRX::listSensors(void) const {
     std::vector<std::string> sensors;
@@ -1141,9 +1133,9 @@ std::string SoapyLiteXXTRX::readSensor(const std::string &key) const {
 }
 
 
-/*******************************************************************
- * Register API
- ******************************************************************/
+/***************************************************************************************************
+ *                                     Register API
+ **************************************************************************************************/
 
 std::vector<std::string> SoapyLiteXXTRX::listRegisterInterfaces(void) const {
     std::vector<std::string> interfaces;
@@ -1182,9 +1174,9 @@ unsigned SoapyLiteXXTRX::readRegister(const std::string &name, const unsigned ad
 }
 
 
-/*******************************************************************
- * Settings API
- ******************************************************************/
+/***************************************************************************************************
+ *                                        Settings API
+ **************************************************************************************************/
 
 std::string SoapyLiteXXTRX::readSetting(const std::string &key) const
 {
