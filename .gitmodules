@@ -1,4 +1,0 @@
-[submodule "software/limesuite"]
-	path = app/limesuite
-	url = https://github.com/enjoy-digital/LimeSuite.git
-	shallow = true
