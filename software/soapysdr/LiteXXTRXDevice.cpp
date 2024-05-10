@@ -22,7 +22,6 @@
 #include <SoapySDR/Registry.hpp>
 #include <SoapySDR/Logger.hpp>
 
-// TODO define    : What the issue/limitation?
 // FIXME define   : What the issue/limitation?
 // FORNEXT define : What the issue/limitation?
 
@@ -391,9 +390,8 @@ SoapyLiteXXTRX::SoapyLiteXXTRX(const SoapySDR::Kwargs &args)
 
     // NOTE: if initialization misses a setting/register, try experimenting in
     //       LimeGUI and loading that register dump here
-#ifdef TODO
     if (args.count("ini") != 0) {
-        if (LMS7002M_load_ini(_lms, args.at("ini").c_str())){
+        if (_lms2->LoadConfig(args.at("ini").c_str()) != lime::OpStatus::Success){
             SoapySDR::log(SOAPY_SDR_ERROR, "SoapyLiteXXTRX configuration load failed");
             throw std::runtime_error("failed to load XTRX configuration");
         } else {
@@ -401,7 +399,6 @@ SoapyLiteXXTRX::SoapyLiteXXTRX(const SoapySDR::Kwargs &args)
 
         }
     }
-#endif
 
     SoapySDR::log(SOAPY_SDR_INFO, "SoapyLiteXXTRX initialization complete");
 }
