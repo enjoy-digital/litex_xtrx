@@ -840,20 +840,52 @@ void SoapyLiteXXTRX::setFrequency(const int direction, const size_t channel,
         _cachedFreqValues[direction][1][name] = actualFreq;
     }
 
-#ifdef FIXME
-    /* FIXME: read only with LimeSuiteNG */
     if (name == "BB") {
-        const double baseRate = this->getTSPRate(direction);
-        if (direction == SOAPY_SDR_RX)
-            LMS7002M_rxtsp_set_freq(_lms, ch2LMS(channel),
-                                    frequency / baseRate);
-        if (direction == SOAPY_SDR_TX)
-            LMS7002M_txtsp_set_freq(_lms, ch2LMS(channel),
-                                    frequency / baseRate);
-        _cachedFreqValues[direction][channel][name] = frequency;
+        if (SetNCOFrequency(direction, channel, 0, direction == SOAPY_SDR_TX ? frequency : -frequency))
+            _cachedFreqValues[direction][channel][name] = frequency;
     }
-#endif
 }
+
+bool SoapyLiteXXTRX::SetNCOFrequency(const int direction, const size_t channel,
+        uint8_t index, double frequency, double phaseOffset) {
+
+    _lms2->SetActiveChannel(channel == 0 ? lime::LMS7002M::Channel::ChA : lime::LMS7002M::Channel::ChB);
+
+    bool enable = frequency != 0;
+    lime::TRXDir dir = direction == SOAPY_SDR_TX ? lime::TRXDir::Tx : lime::TRXDir::Rx;
+    bool tx = direction == SOAPY_SDR_TX;
+
+    if ((_lms2->Modify_SPI_Reg_bits(tx ? LMS7_CMIX_BYP_TXTSP : LMS7_CMIX_BYP_RXTSP, !enable) != lime::OpStatus::Success) ||
+        (_lms2->Modify_SPI_Reg_bits(tx ? LMS7_CMIX_GAIN_TXTSP : LMS7_CMIX_GAIN_RXTSP, enable) != lime::OpStatus::Success)) {
+        SoapySDR::logf(SOAPY_SDR_ERROR,
+                   "SoapyLiteXXTRX::setFrequency(%s, ch%d, BB, %f MHz)",
+                   dir2Str(direction), channel, frequency / 1e6);
+        return false;
+    }
+
+    lime::OpStatus status = _lms2->SetNCOFrequency(dir, index, std::fabs(frequency));
+    if (status != lime::OpStatus::Success)
+        return false;
+
+    if (enable) {
+        bool down = frequency < 0;
+        if ((!tx) && (_lms2->Get_SPI_Reg_bits(LMS7_MASK) == 0))
+            down = !down;
+
+        if ((_lms2->Modify_SPI_Reg_bits(tx ? LMS7_SEL_TX : LMS7_SEL_RX, index) != lime::OpStatus::Success) ||
+            (_lms2->Modify_SPI_Reg_bits(tx ? LMS7_MODE_TX : LMS7_MODE_RX, 0) != lime::OpStatus::Success) ||
+            (_lms2->Modify_SPI_Reg_bits(tx ? LMS7_CMIX_SC_TXTSP : LMS7_CMIX_SC_RXTSP, down) != lime::OpStatus::Success)) {
+            SoapySDR::logf(SOAPY_SDR_ERROR,
+                "Failed to set %s NCO%i frequency", dir2Str(direction), index);
+            return false;
+        }
+    }
+
+    if (phaseOffset != -1.0)
+        return _lms2->SetNCOPhaseOffsetForMode0(dir, phaseOffset) == lime::OpStatus::Success;
+    return true;
+}
+
 
 double SoapyLiteXXTRX::getFrequency(const int direction, const size_t channel,
                                const std::string &name) const {

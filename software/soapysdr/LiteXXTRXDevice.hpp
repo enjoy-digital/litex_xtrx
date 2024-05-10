@@ -97,6 +97,8 @@ class DLL_EXPORT SoapyLiteXXTRX : public SoapySDR::Device {
                          const size_t channel) const override;
     void setDCOffsetMode(const int direction, const size_t channel,
                          const bool automatic) override;
+    bool SetNCOFrequency(const int direction, const size_t channel,
+                         uint8_t index, double frequency, double phaseOffset=-1.0);
     bool getDCOffsetMode(const int direction,
                          const size_t channel) const override;
     bool hasDCOffset(const int direction,
