@@ -813,6 +813,11 @@ SoapySDR::Range SoapyLiteXXTRX::getGainRange(const int direction,
  *                                     Frequency API
  **************************************************************************************************/
 
+void SoapyLiteXXTRX::setFrequency(int direction, size_t channel, double frequency,
+                             const SoapySDR::Kwargs &args) {
+    setFrequency(direction, channel, "RF", frequency, args);
+}
+
 void SoapyLiteXXTRX::setFrequency(const int direction, const size_t channel,
                              const std::string &name, const double frequency,
                              const SoapySDR::Kwargs &/*args*/) {

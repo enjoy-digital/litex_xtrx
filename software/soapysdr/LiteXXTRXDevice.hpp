@@ -135,6 +135,9 @@ class DLL_EXPORT SoapyLiteXXTRX : public SoapySDR::Device {
 
     // Frequency API
     void
+    setFrequency(int direction, size_t channel, double frequency,
+                 const SoapySDR::Kwargs &args) override;
+    void
     setFrequency(const int direction, const size_t channel, const std::string &,
                  const double frequency,
                  const SoapySDR::Kwargs &args = SoapySDR::Kwargs()) override;
