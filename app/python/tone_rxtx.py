@@ -92,7 +92,7 @@ def measure_delay( args, rate,
     sdr.activateStream(tx_stream)
     time.sleep(0.5)
     tx_pulse = generate_cf32_pulse(num_tx_samps)
-    tx_time_0 = int(sdr.getHardwareTime() + 0.1e9) #100ms
+    tx_time_0 = int(sdr.getHardwareTime() + 0.150e9) #100ms
     #tx_time_0 = 0
     tx_flags = SOAPY_SDR_HAS_TIME | SOAPY_SDR_END_BURST
     #tx_flags = SOAPY_SDR_END_BURST
@@ -123,10 +123,10 @@ def measure_delay( args, rate,
         status = sdr.readStream(rx_stream, [rx_buff], len(rx_buff), timeoutUs=timeout_us)
 
         #stash time on first buffer
-        #if status.ret > 0 and rx_buffs.size == 0:
-        #    rx_time_0 = status.timeNs
-        #    if (status.flags & SOAPY_SDR_HAS_TIME) == 0:
-        #        raise Exception('receive fail - no timestamp on first readStream %s'%(str(status)))
+        if status.ret > 0 and rx_buffs.size == 0:
+            rx_time_0 = status.timeNs
+            #if (status.flags & SOAPY_SDR_HAS_TIME) == 0:
+            #    raise Exception('receive fail - no timestamp on first readStream %s'%(str(status)))
 
         #accumulate buffer or exit loop
         if status.ret > 0:
@@ -148,9 +148,11 @@ def measure_delay( args, rate,
     #    raise Exception('receive fail - no valid timestamp')
 
     ##clear initial samples because transients
-    #rx_mean = np.mean(rx_buffs)
-    #for i in range(len(rx_buffs) // 100):
-    #    rx_buffs[i] = rx_mean
+    with open("rx.bin", "wb") as fd:
+        fd.write(rx_buffs)
+    rx_mean = np.mean(rx_buffs)
+    for i in range(len(rx_buffs) // 100):
+        rx_buffs[i] = rx_mean
 
     ##normalize the samples
     def normalize(samps):
@@ -162,10 +164,10 @@ def measure_delay( args, rate,
 
     tx_pulse_norm = normalize(tx_pulse)
     rx_buffs_norm = normalize(rx_buffs)
-    tx_pulse_norm = tx_pulse
-    rx_buffs_norm = rx_buffs
+    #tx_pulse_norm = tx_pulse
+    #rx_buffs_norm = rx_buffs
 
-    with open("rx.bin", "wb") as fd:
+    with open("rx_norm.bin", "wb") as fd:
         fd.write(rx_buffs_norm)
     with open("tx.bin", "wb") as fd:
         fd.write(tx_pulse_norm)
@@ -178,21 +180,23 @@ def measure_delay( args, rate,
     #    np.save(os.path.join(dump_dir, 'rxRawQ.npy'), np.imag(rx_buffs))
 
     ##look for the for peak index for time offsets
-    #rx_argmax_index = np.argmax(rx_buffs_norm)
-    #tx_argmax_index = np.argmax(tx_pulse_norm)
+    rx_argmax_index = np.argmax(rx_buffs_norm)
+    tx_argmax_index = np.argmax(tx_pulse_norm)
 
     ##check goodness of peak by comparing argmax and correlation
-    #rx_coor_index = np.argmax(np.correlate(rx_buffs_norm, tx_pulse_norm)) + len(tx_pulse_norm) // 2
-    #if abs(rx_coor_index-rx_argmax_index) > len(tx_pulse_norm)/4:
-    #    raise Exception(
-    #        'correlation(%d) does not match argmax(%d), probably bad data' %
-    #        (rx_coor_index, rx_argmax_index))
+    print(np.argmax(np.correlate(rx_buffs_norm, tx_pulse_norm)))
+    rx_coor_index = np.argmax(np.correlate(rx_buffs_norm, tx_pulse_norm)) + len(tx_pulse_norm) // 2
+    print(rx_coor_index)
+    if abs(rx_coor_index-rx_argmax_index) > len(tx_pulse_norm)/4:
+        raise Exception(
+            'correlation(%d) does not match argmax(%d), probably bad data' %
+            (rx_coor_index, rx_argmax_index))
 
     ##calculate time offset
-    ##tx_peak_time = int(tx_time_0 + (tx_argmax_index / rate) * 1e9)
-    ##rx_peak_time = int(rx_time_0 + (rx_argmax_index / rate) * 1e9)
-    ##time_delta = rx_peak_time - tx_peak_time
-    ##print('>>> Time delta %f us'%(time_delta / 1e3))
+    tx_peak_time = int(tx_time_0 + (tx_argmax_index / rate) * 1e9)
+    rx_peak_time = int(rx_time_0 + (rx_argmax_index / rate) * 1e9)
+    time_delta = rx_peak_time - tx_peak_time
+    print('>>> Time delta %f us'%(time_delta / 1e3))
     print("Done!")
 
 def main():
