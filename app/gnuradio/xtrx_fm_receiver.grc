@@ -11,7 +11,7 @@ options:
     gen_linking: dynamic
     generate_options: qt_gui
     hier_block_src_path: '.:'
-    id: fm_receiver2
+    id: xtrx_fm_receiver
     max_nouts: '0'
     output_language: python
     placement: (0,0)
@@ -54,7 +54,7 @@ blocks:
     coordinate: [296, 28.0]
     rotation: 0
     state: enabled
-- name: gain
+- name: gainA
   id: variable_qtgui_range
   parameters:
     comment: ''
@@ -65,14 +65,35 @@ blocks:
     rangeType: float
     start: int(0)
     step: int(1)
-    stop: int(100)
-    value: int(36)
+    stop: int(73)
+    value: int(6)
     widget: counter_slider
   states:
     bus_sink: false
     bus_source: false
     bus_structure: null
     coordinate: [624, 28.0]
+    rotation: 0
+    state: enabled
+- name: gainB
+  id: variable_qtgui_range
+  parameters:
+    comment: ''
+    gui_hint: ''
+    label: ''
+    min_len: '200'
+    orient: QtCore.Qt.Horizontal
+    rangeType: float
+    start: int(0)
+    step: int(1)
+    stop: int(73)
+    value: int(6)
+    widget: counter_slider
+  states:
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+    coordinate: [760, 28.0]
     rotation: 0
     state: enabled
 - name: samp_rate
@@ -598,8 +619,8 @@ blocks:
     agc0: 'False'
     agc1: 'False'
     alias: ''
-    antenna0: LNAH
-    antenna1: LNAH
+    antenna0: LNAL
+    antenna1: LNAL
     bandwidth0: 20e6
     bandwidth1: 20e6
     center_freq0: freq
@@ -613,8 +634,8 @@ blocks:
     driver: LiteXXTRX
     freq_correction0: '0'
     freq_correction1: '0'
-    gain0: gain
-    gain1: gain
+    gain0: gainA
+    gain1: gainB
     iq_balance0: '0'
     iq_balance1: '0'
     maxoutbuf: '0'
@@ -650,3 +671,4 @@ connections:
 
 metadata:
   file_format: 1
+  grc_version: 3.10.9.2
