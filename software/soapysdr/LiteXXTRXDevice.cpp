@@ -547,7 +547,10 @@ void SoapyLiteXXTRX::setDCOffsetMode(const int direction, const size_t channel,
     std::lock_guard<std::mutex> lock(_mutex);
 
     if (direction == SOAPY_SDR_RX) {
-        /* FIXME: missing window */
+        /* FIXME:
+         * With LMS7002M_rxtsp_set_dc_correction DCCORR_AVG[2:0] (register 0x404)
+         * is also updated with a value between 0 and 7.
+         */
         _lms2->Modify_SPI_Reg_bits(LMS7param(DC_BYP_RXTSP), automatic == 0, channel);
         _rxDCOffsetMode = automatic;
     } else {
@@ -604,6 +607,10 @@ void SoapyLiteXXTRX::setIQBalance(const int direction, const size_t channel,
 
 //#define FIXME
 #ifdef FIXME
+    /* With this implementation (from LimeSuiteNG) RX signal has a small / near zero real
+     * part and all the information on the imaginary part.
+     * method "set_iq_correction" comes from obsolete LMS700M_Driver.
+     */
     const auto lmsDir = (direction == SOAPY_SDR_TX) ? lime::TRXDir::Tx : lime::TRXDir::Rx;
     const lime::LMS7002M::Channel chan = channel > 0 ? lime::LMS7002M::Channel::ChB : lime::LMS7002M::Channel::ChA;
     const double gain = std::abs(balance);
