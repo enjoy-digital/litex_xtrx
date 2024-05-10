@@ -45,15 +45,8 @@ apt install gnuradio gnuradio-dev soapysdr-tools libsoapysdr0.8 libsoapysdr-dev 
 
 Build the design and flash it to the board:
 ```bash
-./fairwaves_xtrx.py --build --flash [--driver]
+./litex_xtrx.py --build --flash [--driver]
 ```
-
->Notes: python script may be modified for test purpose
-- `with_analyzer` to enable/disable *litescope* support
-- `with_rx_pattern` to replace *lms7002* rx stream by a pattern generator + a converter 32 -> 64
-- `with_tx_pattern` to cut *DMA* -> *lms7002* TX stream and to replace by a converter 64->32 always ready
-- `with_rx_scope` (must be enabled at the same time at `with_rx_pattern` and `with_analyzer` to have access to rx signals (pattern generator, dma sink and writer sink);
-- `with_tx_scope` (must be enabled at the same time at `with_tx_pattern` and `with_analyzer` to have access to tx signals dma source and reader source and converter source);
 
 #### [> Check Board Presence
 Reboot or Rescan PCIe Bus (Optional):
@@ -172,49 +165,6 @@ DMA_SPEED(Gbps) TX_BUFFERS      RX_BUFFERS      DIFF    ERRORS
           6.84       21120           20992       128         0
           6.84       23744           23616       128         0
           6.86       26400           26272       128         0
-```
-
-#### [> LimeSuite
-
-Get/Use modified LimeSuite:
-```
-git clone https://github.com/JuliaComputing/LimeSuite
-cd LimeSuite
-git checkout tb/xtrx_litepcie
-mkdir builddir
-cd builddir
-LITEPCIE_ROOT=/path/to/xtrx_julia/software cmake -DENABLE_XTRX=yes -DCMAKE_BUILD_TYPE=Debug ../
-make
-sudo make install
-```
-
-TX-RX FPGA internal loopback test:
-```
-LimeSuiteGUI (and open/load xtrx_dlb.ini)
-cd software/app
-make
-./litex_xtrx_util lms_set_tx_rx_loopback 1
-./litex_xtrx_util dma_test -e -w 12
-```
-
-TX Pattern + LMS7002M loopback test:
-```
-LimeSuiteGUI (and open/load xtrx_dlb.ini)
-cd software/app
-make
-./litex_xtrx_util lms_set_tx_rx_loopback 0
-./litex_xtrx_util lms_set_tx_pattern 1
-../user/litepcie_test record dump.bin 0x100
-```
-
-DMA+LMS7002 loopback test:
-```
-LimeSuiteGUI (and open/load xtrx_dlb.ini)
-cd software/app
-make
-./litex_xtrx_util lms_set_tx_rx_loopback 0
-./litex_xtrx_util lms_set_tx_pattern 0
-./litex_xtrx_util dma_test -e -w 12
 ```
 
 #### [> LiteScope
