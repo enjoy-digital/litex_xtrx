@@ -443,7 +443,7 @@ int SoapyLiteXXTRX::readStream(SoapySDR::Stream *stream,
     /* If there's a remainder buffer from a previous read, process that first. */
     if (_rx_stream.remainderHandle >= 0) {
         const size_t n = std::min(_rx_stream.remainderSamps, returnedElems);
-        const uint32_t remainderOffset = _tx_stream.remainderOffset * cplx_size * 2;
+        const uint32_t remainderOffset = _rx_stream.remainderOffset * cplx_size * 2;
 
         if (n < returnedElems) {
             samp_avail = n;
