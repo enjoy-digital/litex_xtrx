@@ -3,7 +3,11 @@ BUILD_DIR?=../build/fairwaves_xtrx/
 include $(BUILD_DIR)/software/include/generated/variables.mak
 include $(SOC_DIRECTORY)/software/common.mak
 
-OBJECTS = isr.o i2c0.o i2c1.o main.o crt0.o
+OBJECTS = i2c0.o i2c1.o main.o crt0.o
+
+COMMA = ,
+REGULAR_LIBS = $(filter-out $(ALWAYS_LINK_LIBS),$(LIBS))
+ALWAYS_LINK_LIBFLAGS = $(if $(ALWAYS_LINK_LIBS),-Wl$(COMMA)--whole-archive $(ALWAYS_LINK_LIBS:lib%=-l%) -Wl$(COMMA)--no-whole-archive)
 
 all: firmware.bin
 
@@ -20,7 +24,11 @@ firmware.elf: $(OBJECTS)
 		-N -o $@ \
 		$(OBJECTS) \
 		$(PACKAGES:%=-L$(BUILD_DIR)/software/%) \
-		$(LIBS:lib%=-l%)
+		-Wl,--start-group \
+		$(REGULAR_LIBS:lib%=-l%) \
+		$(ALWAYS_LINK_LIBFLAGS) \
+		-Wl,--end-group \
+		-Wl,--gc-sections
 	chmod -x $@
 
 main.o: main.c
