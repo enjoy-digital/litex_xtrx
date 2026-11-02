@@ -12,10 +12,12 @@ PCIe DMA, LMS7002M digital interface, GPS/time sync, RF switches, SoapySDR suppo
 ## Verify a change
 
 ```sh
-./litex_xtrx.py --help                                              # SoC options (checks it imports with the installed LiteX)
+./litex_xtrx.py                                                     # no --build: gateware, firmware, BIOS and driver headers, no Vivado
 ./litex_xtrx.py --build                                             # gateware build (Vivado)
 ```
 
+- Without `--build`, the script regenerates `software/kernel/{csr,mem,soc}.h`: commit them when the
+  CSR map changes (they must match the bitstream the driver talks to).
 - LMS7002M interface changes: run the PRBS/digital interface test scripts on hardware, at several
   sample rates.
 

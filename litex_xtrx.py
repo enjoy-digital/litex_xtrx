@@ -25,8 +25,8 @@ from litex.soc.integration.builder  import *
 from litex.soc.cores.clock     import *
 from litex.soc.cores.led       import LedChaser
 from litex.soc.cores.icap      import ICAP
-from litex.soc.cores.xadc      import XADC
-from litex.soc.cores.dna       import DNA
+from litex.soc.cores.xadc      import S7SystemMonitor
+from litex.soc.cores.dna       import S7DNA
 from litex.soc.cores.gpio      import GPIOOut
 from litex.soc.cores.spi_flash import S7SPIFlash
 from litex.soc.cores.bitbang   import I2CMaster
@@ -118,7 +118,6 @@ class BaseSoC(SoCCore):
             cpu_type                 = "vexriscv" if with_cpu else None,
             cpu_variant              = "minimal",
             integrated_rom_size      = 0x8000 if with_cpu else 0,
-            integrated_sram_ram_size = 0x1000 if with_cpu else 0,
             integrated_main_ram_size = 0x4000 if with_cpu else 0,
             integrated_main_ram_init = [] if cpu_firmware is None else get_mem_data(cpu_firmware, endianness="little"),
             uart_name                = "crossover",
@@ -157,10 +156,10 @@ class BaseSoC(SoCCore):
         self.flash      = S7SPIFlash(platform.request("flash"), sys_clk_freq, 25e6)
 
         # XADC -------------------------------------------------------------------------------------
-        self.xadc = XADC()
+        self.xadc = S7SystemMonitor()
 
         # DNA --------------------------------------------------------------------------------------
-        self.dna = DNA()
+        self.dna = S7DNA()
         self.dna.add_timing_constraints(platform, sys_clk_freq, self.crg.cd_sys.clk)
 
         # PCIe -------------------------------------------------------------------------------------
